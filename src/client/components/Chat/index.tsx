@@ -1,8 +1,5 @@
 import React, { useState } from "react";
 import TextArea from "../../shared/TextArea";
-import { sendBotMessage } from "../../services/api";
-import { send } from "vite";
-import { kill } from "process";
 
 type GetStartedProps = {
   onStartConversation: (message: string) => void;
@@ -39,12 +36,8 @@ const GetStarted = ({ onStartConversation }: GetStartedProps) => {
 };
 
 const Home = () => {
-  const onStartConversation = async (message: string) => {
-    try {
-      const data = await sendBotMessage(message);
-    } catch (err) {
-      console.log("Here is an error", err);
-    }
+  const onStartConversation = (message: string) => {
+    console.log("here starting a conversation", message);
   };
 
   return (
