@@ -1,0 +1,222 @@
+@import "tailwindcss";
+
+/* Caslon */
+@font-face {
+  font-family: "Caslon";
+  src: url("./assets/fonts/Caslon/ACaslonPro-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Caslon";
+  src: url("./assets/fonts/Caslon/ACaslonPro-Semibold.otf") format("opentype");
+  font-weight: 600;
+  font-style: normal;
+}
+
+/* DD */
+@font-face {
+  font-family: "DD";
+  src: url("./assets/fonts/DD/DD-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "DD";
+  src: url("./assets/fonts/DD/DD-RegularItalic.otf") format("opentype");
+  font-weight: 400;
+  font-style: italic;
+}
+@font-face {
+  font-family: "DD";
+  src: url("./assets/fonts/DD/DD-Medium.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: "DD";
+  src: url("./assets/fonts/DD/DD-MediumItalic.otf") format("opentype");
+  font-weight: 500;
+  font-style: italic;
+}
+@font-face {
+  font-family: "DD";
+  src: url("./assets/fonts/DD/DD-Semibold.otf") format("opentype");
+  font-weight: 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: "DD";
+  src: url("./assets/fonts/DD/DD-SemiboldItalic.otf") format("opentype");
+  font-weight: 600;
+  font-style: italic;
+}
+@font-face {
+  font-family: "DD";
+  src: url("./assets/fonts/DD/DD-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: "DD";
+  src: url("./assets/fonts/DD/DD-BoldItalic.otf") format("opentype");
+  font-weight: 700;
+  font-style: italic;
+}
+@font-face {
+  font-family: "DD";
+  src: url("./assets/fonts/DD/DD-Extrabold.otf") format("opentype");
+  font-weight: 800;
+  font-style: normal;
+}
+@font-face {
+  font-family: "DD";
+  src: url("./assets/fonts/DD/DD-ExtraboldItalic.otf") format("opentype");
+  font-weight: 800;
+  font-style: italic;
+}
+@font-face {
+  font-family: "DD";
+  src: url("./assets/fonts/DD/DD-Black.otf") format("opentype");
+  font-weight: 900;
+  font-style: normal;
+}
+@font-face {
+  font-family: "DD";
+  src: url("./assets/fonts/DD/DD-BlackItalic.otf") format("opentype");
+  font-weight: 900;
+  font-style: italic;
+}
+
+/* DDN */
+@font-face {
+  font-family: "DDN";
+  src: url("./assets/fonts/DDN/DDN-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "DDN";
+  src: url("./assets/fonts/DDN/DDN-RegularItalic.otf") format("opentype");
+  font-weight: 400;
+  font-style: italic;
+}
+@font-face {
+  font-family: "DDN";
+  src: url("./assets/fonts/DDN/DDN-Medium.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+}
+@font-face {
+  font-family: "DDN";
+  src: url("./assets/fonts/DDN/DDN-MediumItalic.otf") format("opentype");
+  font-weight: 500;
+  font-style: italic;
+}
+@font-face {
+  font-family: "DDN";
+  src: url("./assets/fonts/DDN/DDN-Semibold.otf") format("opentype");
+  font-weight: 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: "DDN";
+  src: url("./assets/fonts/DDN/DDN-SemiboldItalic.otf") format("opentype");
+  font-weight: 600;
+  font-style: italic;
+}
+@font-face {
+  font-family: "DDN";
+  src: url("./assets/fonts/DDN/DDN-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: "DDN";
+  src: url("./assets/fonts/DDN/DDN-BoldItalic.otf") format("opentype");
+  font-weight: 700;
+  font-style: italic;
+}
+@font-face {
+  font-family: "DDN";
+  src: url("./assets/fonts/DDN/DDN-Extrabold.otf") format("opentype");
+  font-weight: 800;
+  font-style: normal;
+}
+@font-face {
+  font-family: "DDN";
+  src: url("./assets/fonts/DDN/DDN-ExtraboldItalic.otf") format("opentype");
+  font-weight: 800;
+  font-style: italic;
+}
+@font-face {
+  font-family: "DDN";
+  src: url("./assets/fonts/DDN/DDN-Black.otf") format("opentype");
+  font-weight: 900;
+  font-style: normal;
+}
+@font-face {
+  font-family: "DDN";
+  src: url("./assets/fonts/DDN/DDN-BlackItalic.otf") format("opentype");
+  font-weight: 900;
+  font-style: italic;
+}
+
+/* Fakt */
+@font-face {
+  font-family: "Fakt";
+  src: url("./assets/fonts/Fakt/FaktPro-Light.ttf") format("truetype");
+  font-weight: 300;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Fakt";
+  src: url("./assets/fonts/Fakt/FaktPro-Blond.ttf") format("truetype");
+  font-weight: 350;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Fakt";
+  src: url("./assets/fonts/Fakt/FaktPro-Normal.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Fakt";
+  src: url("./assets/fonts/Fakt/FaktPro-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Fakt";
+  src: url("./assets/fonts/Fakt/FaktPro-Black.ttf") format("truetype");
+  font-weight: 900;
+  font-style: normal;
+}
+
+/* GT Super */
+@font-face {
+  font-family: "GT Super";
+  src: url("./assets/fonts/GTSuper/GT-Super-Display-Medium.ttf")
+    format("truetype");
+  font-weight: 500;
+  font-style: normal;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+}
+
+@theme {
+  --font-caslon: "Caslon", serif;
+  --font-dd: "DD", sans-serif;
+  --font-ddn: "DDN", sans-serif;
+  --font-fakt: "Fakt", sans-serif;
+  --font-gt-super: "GT Super", serif;
+  --color-highlight: #ffd800;
+  --color-body: #faf8f5;
+}
+
+button {
+  cursor: pointer;
+}
