@@ -6,12 +6,15 @@
   "scripts": {
     "dev": "nodemon -w src/server -x tsx src/server/main.ts",
     "start": "NODE_ENV=production tsx src/server/main.ts",
-    "build": "vite build"
+    "build": "vite build",
+    "db:setup": "tsx src/server/db/setup.ts",
+    "db:reset": "tsx src/server/db/setup.ts --reset"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
     "@tailwindcss/vite": "^4.1.18",
     "axios": "^1.13.5",
+    "better-sqlite3": "^12.6.2",
     "dotenv": "^17.2.4",
     "express": "^5.1.0",
     "react": "^19.1.0",
@@ -23,6 +26,7 @@
     "vite-express": "*"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/express": "^5.0.1",
     "@types/node": "^22.15.2",
     "@types/react": "^19.1.2",
