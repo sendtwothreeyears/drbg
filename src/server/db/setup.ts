@@ -4,7 +4,7 @@ import { fileURLToPath } from "url";
 import { readFileSync, existsSync, unlinkSync } from "fs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DB_PATH = join(__dirname, "bogan.db");
+const DB_PATH = join(__dirname, "cb.db");
 const schema = readFileSync(join(__dirname, "schema.sql"), "utf-8");
 const reset = process.argv.includes("--reset");
 
