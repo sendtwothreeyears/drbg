@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import TextArea, { TextAreaHandle } from "../../shared/TextArea";
 import Spinner from "../../shared/Spinner";
-import { sendBotMessage } from "../../services/api";
+import { createNewConversation } from "../../services/api";
 
 type GetStartedProps = {
   onStartConversation: (message: string) => void;
@@ -58,7 +58,7 @@ const Home = () => {
   const onStartConversation = async (message: string) => {
     try {
       setLoading(true);
-      const { data } = await sendBotMessage(message);
+      const { data } = await createNewConversation(message);
       navigate(`/conversation/${data.conversationId}`);
     } catch (err) {
       console.log("Here is an error", err);
