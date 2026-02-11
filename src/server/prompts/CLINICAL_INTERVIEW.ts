@@ -20,10 +20,7 @@ Clinical data extraction:
 - Do not re-extract findings that are already recorded (see below)
 - Continue your conversational response naturally alongside any tool calls`;
 
-type Finding = {
-  category: string;
-  value: string;
-};
+import type { Finding } from "../types";
 
 export const buildClinicalInterviewPrompt = (
   profile?: { age: number; biological_sex: string },
