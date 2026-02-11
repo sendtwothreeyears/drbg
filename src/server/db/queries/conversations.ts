@@ -13,4 +13,24 @@ const getConversation = (id: string) => {
     .get(id);
 };
 
-export { createConversation, getConversation };
+const updateConversationTitle = (id: string, title: string) => {
+  db.prepare("UPDATE conversations SET title = ? WHERE conversationid = ?").run(
+    title,
+    id,
+  );
+};
+
+const getAllConversations = () => {
+  return db
+    .prepare(
+      "SELECT conversationid, title, created_at FROM conversations ORDER BY created_at DESC",
+    )
+    .all();
+};
+
+export {
+  createConversation,
+  getConversation,
+  updateConversationTitle,
+  getAllConversations,
+};
