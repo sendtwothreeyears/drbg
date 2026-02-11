@@ -55,8 +55,8 @@ const getDisplayContent = (
 
 const Conversation = () => {
   const { conversationId } = useParams();
-  const [searchParams] = useSearchParams();
-  const showFindings = searchParams.has("findings");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [showFindings, setShowFindings] = useState(searchParams.has("findings"));
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -223,11 +223,34 @@ const Conversation = () => {
 
   const inputDisabled = waiting || !!pendingToolUse;
 
+  const toggleFindings = () => {
+    const next = !showFindings;
+    setShowFindings(next);
+    if (next) {
+      setSearchParams({ findings: "" }, { replace: true });
+    } else {
+      searchParams.delete("findings");
+      setSearchParams(searchParams, { replace: true });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-body flex">
-      <div className={`flex flex-col flex-1 ${showFindings ? "max-w-2xl mx-auto" : "max-w-2xl mx-auto"}`}>
-          <div className="font-ddn font-semibold text-3xl pt-8 pb-4">
-            Dr. Bogan
+      <div className="flex flex-col flex-1 max-w-2xl mx-auto">
+          <div className="flex items-center justify-between pt-8 pb-4">
+            <div className="font-ddn font-semibold text-3xl">
+              Dr. Bogan
+            </div>
+            <button
+              onClick={toggleFindings}
+              className="flex items-center gap-2 font-fakt text-sm text-gray-500"
+              aria-label="Toggle findings panel"
+            >
+              <span>Show clinical findings</span>
+              <div className={`relative w-9 h-5 rounded-full transition-colors ${showFindings ? "bg-slate-800" : "bg-gray-300"}`}>
+                <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${showFindings ? "translate-x-4" : "translate-x-0"}`} />
+              </div>
+            </button>
           </div>
           <div className="flex-1 py-4">
             {messages.map((msg, i) => {
@@ -316,8 +339,8 @@ const Conversation = () => {
             </div>
           </div>
         </div>
-      {showFindings && conversationId && (
-        <div className="w-80 border-l border-gray-200 bg-gray-50 flex-shrink-0 sticky top-0 h-screen overflow-y-auto">
+      {conversationId && (
+        <div className={`fixed top-0 right-0 w-80 h-screen border-l border-gray-200 bg-gray-50 overflow-y-auto z-20 transition-transform duration-300 ease-in-out ${showFindings ? "translate-x-0" : "translate-x-full"}`}>
           <FindingsPanel ref={findingsRef} conversationId={conversationId} />
         </div>
       )}
