@@ -43,8 +43,11 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         className={`absolute left-0 top-0 h-full w-72 bg-white shadow-lg flex flex-col transition-transform duration-200 ease-out ${animateIn ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b">
-          <span className="font-gt-super font-medium text-lg">Conversations</span>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-800 text-xl">
+          <span className="font-fakt font-semibold text-lg">Conversations</span>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-800 text-xl"
+          >
             &times;
           </button>
         </div>
@@ -58,7 +61,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
               }}
               className="w-full text-left px-4 py-3 hover:bg-gray-100 border-b border-gray-100"
             >
-              <div className="font-fakt text-sm truncate">
+              <div className="font-fakt text-md truncate">
                 {c.title || "Untitled"}
               </div>
               <div className="font-fakt text-xs text-gray-400 mt-1">

@@ -69,28 +69,31 @@ const Home = () => {
 
   return (
     <div className="h-screen bg-body">
-      <div className="max-w-lg m-auto py-30 flex flex-col">
-        <div className="font-gt-super font-medium text-3xl">
-          Hi, I'm{" "}
-          <span className="relative">
-            Dr. Bogan
-            <span className="absolute left-[5px] z-[-1] right-0 bottom-0 h-[5px] bg-highlight" />
-          </span>
-        </div>
-        <div className="font-fakt text-gray-600 font-medium text-lg pt-2">
-          <div className="py-2">
-            Symptom assessment, guided by AI. Through a structured clinical
-            interview, we'll help you understand what your symptoms may
-            indicate.
+      <div className="max-w-lg m-auto py-40 flex flex-col">
+        <div className="mb-2">
+          <div className="font-ddn font-semibold text-4xl mb-2">
+            Hi, I'm{" "}
+            <span className="relative">
+              Dr. Bogan
+              <span className="absolute left-[5px] z-[-1] right-0 bottom-0 h-[5px] bg-highlight" />
+            </span>
           </div>
-          <div className="py-2">No account required. No cost.</div>
-          <div className="py-2">What symptoms are you experiencing?</div>
+          <div className="font-fakt text-gray-600 font-medium text-xl pt-2">
+            <div className="py-2">Symptom assessment, guided by AI.</div>
+            <div className="py-2">
+              Through a structured clinical interview, we'll help you understand
+              what your symptoms may indicate.
+            </div>
+            <div className="py-2">What symptoms are you experiencing?</div>
+          </div>
         </div>
         {/* Entry point for AI documenter */}
-        <GetStarted
-          onStartConversation={onStartConversation}
-          loading={loading}
-        />
+        <div className="py-2">
+          <GetStarted
+            onStartConversation={onStartConversation}
+            loading={loading}
+          />
+        </div>
       </div>
     </div>
   );

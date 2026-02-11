@@ -57,6 +57,10 @@ const sendFollowUp = async (conversationId: string, message: string) => {
   });
 };
 
+const getFindings = async (conversationId: string) => {
+  return await axios.get(`/api/conversation/${conversationId}/findings`);
+};
+
 const getAllConversations = async () => {
   return await axios.get("/api/conversations");
 };
@@ -76,6 +80,7 @@ const submitDemographics = async (
 export {
   sendBotMessage,
   getConversation,
+  getFindings,
   streamAIResponse,
   sendFollowUp,
   getAllConversations,
