@@ -2,28 +2,65 @@ import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import TextArea, { TextAreaHandle } from "../../shared/TextArea";
+import { startStream } from "../../services/stream";
 
 const Conversation = () => {
   const { conversationId } = useParams();
   const [messages, setMessages] = useState<any[]>([]);
   const [message, setMessage] = useState("");
+  const [streaming, setStreaming] = useState(false);
   const textAreaRef = useRef<TextAreaHandle>(null);
+
+  // Helper functions
+
+  const streamResponse = () => {
+    setStreaming(true);
+    setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+    startStream(
+      conversationId!,
+      (text) => {
+        setMessages((prev) => {
+          const updated = [...prev];
+          const last = updated[updated.length - 1];
+          updated[updated.length - 1] = {
+            ...last,
+            content: last.content + text,
+          };
+          return updated;
+        });
+      },
+      () => {
+        setStreaming(false);
+        textAreaRef.current?.focus();
+      },
+    );
+  };
+
+  // Component mounting
 
   useEffect(() => {
     const load = async () => {
       const { data } = await axios.get(`/api/conversation/${conversationId}`);
       setMessages(data.messages);
       textAreaRef.current?.focus();
+
+      const lastMessage = data.messages[data.messages.length - 1];
+      if (lastMessage?.role === "user") {
+        streamResponse();
+      }
     };
     load();
   }, [conversationId]);
 
   const handleSend = async () => {
-    if (!message.trim()) return;
+    if (!message.trim() || streaming) return;
     const text = message.trim();
     setMessage("");
     setMessages((prev) => [...prev, { role: "user", content: text }]);
-    await axios.post(`/api/conversation/${conversationId}/message`, { message: text });
+    await axios.post(`/api/conversation/${conversationId}/message`, {
+      message: text,
+    });
+    streamResponse();
   };
 
   const renderMessages = () =>
@@ -55,9 +92,7 @@ const Conversation = () => {
         </div>
 
         {/* Messages area */}
-        <div className="flex-1 py-4">
-          {renderMessages()}
-        </div>
+        <div className="flex-1 py-4">{renderMessages()}</div>
 
         {/* Input area */}
         <div className="sticky bottom-0 bg-body pb-4">
@@ -72,8 +107,8 @@ const Conversation = () => {
             <div className="flex justify-end">
               <button
                 onClick={handleSend}
-                disabled={!message.trim()}
-                className={`p-2 rounded-full text-white ${message.trim() ? "bg-black" : "bg-gray-300"}`}
+                disabled={!message.trim() || streaming}
+                className={`p-2 rounded-full text-white ${message.trim() && !streaming ? "bg-black" : "bg-gray-300"}`}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

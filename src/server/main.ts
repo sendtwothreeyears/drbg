@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import ViteExpress from "vite-express";
-import conversationRouter from "./controllers/conversation";
+import conversationRouter from "./routes/conversation";
 
 const app = express();
 
