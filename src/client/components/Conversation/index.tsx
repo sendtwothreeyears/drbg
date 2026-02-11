@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import TextArea, { TextAreaHandle } from "../../shared/TextArea";
 import { startStream } from "../../services/stream";
+import TypingIndicator from "../../shared/TypingIndicator";
 
 const Conversation = () => {
   const { conversationId } = useParams();
@@ -36,6 +37,39 @@ const Conversation = () => {
     );
   };
 
+  const handleSend = async () => {
+    if (!message.trim() || streaming) return;
+    const text = message.trim();
+    setMessage("");
+    setMessages((prev) => [...prev, { role: "user", content: text }]);
+    await axios.post(`/api/conversation/${conversationId}/message`, {
+      message: text,
+    });
+    streamResponse();
+  };
+
+  const renderMessages = () =>
+    messages
+      .filter((msg) => msg.content)
+      .map((msg, i) => (
+        <div
+          key={i}
+          className={`flex py-1 ${
+            msg.role === "user" ? "justify-end" : "justify-start"
+          }`}
+        >
+          <div
+            className={`font-fakt text-lg px-4 py-2 rounded-2xl max-w-[80%] ${
+              msg.role === "user"
+                ? "bg-slate-800 text-white rounded-br-sm"
+                : "bg-white text-gray-800 rounded-bl-sm"
+            }`}
+          >
+            {msg.content}
+          </div>
+        </div>
+      ));
+
   // Component mounting
 
   useEffect(() => {
@@ -52,37 +86,6 @@ const Conversation = () => {
     load();
   }, [conversationId]);
 
-  const handleSend = async () => {
-    if (!message.trim() || streaming) return;
-    const text = message.trim();
-    setMessage("");
-    setMessages((prev) => [...prev, { role: "user", content: text }]);
-    await axios.post(`/api/conversation/${conversationId}/message`, {
-      message: text,
-    });
-    streamResponse();
-  };
-
-  const renderMessages = () =>
-    messages.map((msg, i) => (
-      <div
-        key={i}
-        className={`flex py-1 ${
-          msg.role === "user" ? "justify-end" : "justify-start"
-        }`}
-      >
-        <div
-          className={`font-fakt text-lg px-4 py-2 rounded-2xl max-w-[80%] ${
-            msg.role === "user"
-              ? "bg-slate-800 text-white rounded-br-sm"
-              : "bg-white text-gray-800 rounded-bl-sm"
-          }`}
-        >
-          {msg.content}
-        </div>
-      </div>
-    ));
-
   return (
     <div className="min-h-screen bg-body flex">
       <div className="flex flex-col flex-1 max-w-2xl mx-auto">
@@ -92,7 +95,10 @@ const Conversation = () => {
         </div>
 
         {/* Messages area */}
-        <div className="flex-1 py-4">{renderMessages()}</div>
+        <div className="flex-1 py-4">
+          {renderMessages()}
+          {streaming && !messages[messages.length - 1]?.content && <TypingIndicator />}
+        </div>
 
         {/* Input area */}
         <div className="sticky bottom-0 bg-body pb-4">
