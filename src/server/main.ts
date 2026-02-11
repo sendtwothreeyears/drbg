@@ -105,21 +105,25 @@ router.get("/conversation/:conversationId/stream", async (req, res) => {
   });
 
   stream.on("end", () => {
-    if (toolUseBlock) {
-      // Save assistant message as JSON content array (text block + tool_use block)
-      const contentBlocks: any[] = [];
-      if (fullText) {
-        contentBlocks.push({ type: "text", text: fullText });
+    try {
+      if (toolUseBlock) {
+        // Save assistant message as JSON content array (text block + tool_use block)
+        const contentBlocks: any[] = [];
+        if (fullText) {
+          contentBlocks.push({ type: "text", text: fullText });
+        }
+        contentBlocks.push({
+          type: "tool_use",
+          id: toolUseBlock.id,
+          name: toolUseBlock.name,
+          input: toolUseBlock.input,
+        });
+        createMessage(conversationId, "assistant", JSON.stringify(contentBlocks));
+      } else {
+        createMessage(conversationId, "assistant", fullText);
       }
-      contentBlocks.push({
-        type: "tool_use",
-        id: toolUseBlock.id,
-        name: toolUseBlock.name,
-        input: toolUseBlock.input,
-      });
-      createMessage(conversationId, "assistant", JSON.stringify(contentBlocks));
-    } else {
-      createMessage(conversationId, "assistant", fullText);
+    } catch (err) {
+      console.error("Failed to save assistant message:", err);
     }
 
     if (!closed) {
@@ -139,7 +143,8 @@ router.get("/conversation/:conversationId/stream", async (req, res) => {
     }
   });
 
-  stream.on("error", () => {
+  stream.on("error", (err) => {
+    console.error("Anthropic stream error:", err);
     if (closed) return;
     res.write(`data: ${JSON.stringify({ error: "Stream failed" })}\n\n`);
     res.end();

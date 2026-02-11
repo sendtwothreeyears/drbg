@@ -22,7 +22,9 @@ const tryParseContent = (content: string) => {
 };
 
 // Extract display text from a message that may have JSON content blocks
-const getDisplayContent = (msg: any): { text: string; toolUse?: ToolUseData; isToolResult?: boolean } => {
+const getDisplayContent = (
+  msg: any,
+): { text: string; toolUse?: ToolUseData; isToolResult?: boolean } => {
   const blocks = tryParseContent(msg.content);
   if (!blocks) return { text: msg.content };
 
@@ -32,7 +34,9 @@ const getDisplayContent = (msg: any): { text: string; toolUse?: ToolUseData; isT
     const toolBlock = blocks.find((b: any) => b.type === "tool_use");
     return {
       text: textBlock?.text || "",
-      toolUse: toolBlock ? { id: toolBlock.id, name: toolBlock.name, input: toolBlock.input } : undefined,
+      toolUse: toolBlock
+        ? { id: toolBlock.id, name: toolBlock.name, input: toolBlock.input }
+        : undefined,
     };
   }
 
@@ -54,13 +58,21 @@ const Conversation = () => {
   const [loading, setLoading] = useState(true);
   const [waiting, setWaiting] = useState(false);
   const [sending, setSending] = useState(false);
-  const [pendingToolUse, setPendingToolUse] = useState<ToolUseData | null>(null);
+  const [pendingToolUse, setPendingToolUse] = useState<ToolUseData | null>(
+    null,
+  );
   const [demographicsSubmitted, setDemographicsSubmitted] = useState(false);
   const textAreaRef = useRef<TextAreaHandle>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
 
   const startStream = (cId: string) => {
+    // Close any stale EventSource before opening a new one
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+
     setWaiting(true);
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
@@ -120,7 +132,9 @@ const Conversation = () => {
         if (lastMessage?.role === "user") {
           // Check if this is a tool_result message — if so, stream the AI continuation
           const parsed = tryParseContent(lastMessage.content);
-          const isToolResult = parsed?.some((b: any) => b.type === "tool_result");
+          const isToolResult = parsed?.some(
+            (b: any) => b.type === "tool_result",
+          );
           if (isToolResult) {
             startStream(conversationId!);
             return;
@@ -145,12 +159,20 @@ const Conversation = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, pendingToolUse]);
 
-  const handleDemographicsSubmit = async (age: number, biologicalSex: string) => {
+  const handleDemographicsSubmit = async (
+    age: number,
+    biologicalSex: string,
+  ) => {
     if (!pendingToolUse || !conversationId) return;
     setDemographicsSubmitted(true);
 
     try {
-      await submitDemographics(conversationId, pendingToolUse.id, age, biologicalSex);
+      await submitDemographics(
+        conversationId,
+        pendingToolUse.id,
+        age,
+        biologicalSex,
+      );
       setPendingToolUse(null);
       setDemographicsSubmitted(false);
 
@@ -194,13 +216,16 @@ const Conversation = () => {
   return (
     <div className="min-h-screen bg-body flex flex-col">
       <div className="max-w-2xl w-full mx-auto flex flex-col flex-1">
-        <div className="font-gt-super font-medium text-3xl pt-8 pb-4">Dr. Bogan</div>
+        <div className="font-ddn font-semibold text-3xl pt-8 pb-4">
+          Dr. Bogan
+        </div>
         <div className="flex-1 py-4">
           {messages.map((msg, i) => {
             const { text, toolUse, isToolResult } = getDisplayContent(msg);
 
             // Hide empty streaming placeholder
-            if (msg.role === "assistant" && !text && !toolUse && waiting) return null;
+            if (msg.role === "assistant" && !text && !toolUse && waiting)
+              return null;
 
             // Render tool_result messages as a styled summary
             if (isToolResult) {
@@ -232,7 +257,9 @@ const Conversation = () => {
               </div>
             );
           })}
-          {waiting && messages[messages.length - 1]?.content === "" && <TypingIndicator />}
+          {waiting && messages[messages.length - 1]?.content === "" && (
+            <TypingIndicator />
+          )}
           {pendingToolUse && (
             <DemographicsForm
               onSubmit={handleDemographicsSubmit}

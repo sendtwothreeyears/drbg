@@ -70,7 +70,7 @@ const Home = () => {
   return (
     <div className="h-screen bg-body">
       <div className="max-w-lg m-auto py-30 flex flex-col">
-        <div className="font-gt-super font-medium text-3xl">
+        <div className="font-ddn font-semibold text-3xl">
           Hi, I'm{" "}
           <span className="relative">
             Dr. Bogan
