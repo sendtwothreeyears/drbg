@@ -1,6 +1,6 @@
 import { streamMessage } from "../anthropic";
 import { getMessagesByConversation, createMessage } from "../db/queries/messages";
-import { buildClinicalInterviewPrompt } from "../prompts/CLINICAL_INTERVIEW";
+import CLINICAL_INTERVIEW from "../prompts/CLINICAL_INTERVIEW";
 
 const tryParseJSON = (str: string) => {
   try {
@@ -25,7 +25,7 @@ export async function runStream(
     }))
     .filter((_, i, arr) => !(i === 0 && arr[0].role === "assistant"));
 
-  const systemPrompt = buildClinicalInterviewPrompt();
+  const systemPrompt = CLINICAL_INTERVIEW;
 
   // Stream from Claude
   const stream = streamMessage(messages, systemPrompt);
