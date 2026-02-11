@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import TextArea, { TextAreaHandle } from "../../shared/TextArea";
-import { startStream } from "../../services/stream";
+import { startStream, ToolUseEvent } from "../../services/stream";
 import TypingIndicator from "../../shared/TypingIndicator";
 
 const Conversation = () => {
@@ -10,6 +10,7 @@ const Conversation = () => {
   const [messages, setMessages] = useState<any[]>([]);
   const [message, setMessage] = useState("");
   const [streaming, setStreaming] = useState(false);
+  const [pendingTool, setPendingTool] = useState<ToolUseEvent | null>(null);
   const textAreaRef = useRef<TextAreaHandle>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -34,6 +35,10 @@ const Conversation = () => {
       () => {
         setStreaming(false);
         textAreaRef.current?.focus();
+      },
+      (tool) => {
+        setPendingTool(tool);
+        setStreaming(false);
       },
     );
   };

@@ -1,6 +1,6 @@
 import { streamMessage } from "../anthropic";
 import { getMessagesByConversation, createMessage } from "../db/queries/messages";
-import { collectDemographicsTool } from "../tools/demographics";
+import tools from "../tools";
 import CLINICAL_INTERVIEW from "../prompts/CLINICAL_INTERVIEW";
 
 const tryParseJSON = (str: string) => {
@@ -11,14 +11,15 @@ const tryParseJSON = (str: string) => {
   return null;
 };
 
-type ToolUseBlock = { id: string; name: string; input: any };
+type ToolCall = { id: string; name: string; input: any };
 
 export async function runStream(
   conversationId: string,
   onText: (text: string) => void,
-  onToolUse: (tool: ToolUseBlock) => void,
+  onToolUse: (tool: ToolCall) => void,
   onDone: () => void,
   onError: (err: Error) => void,
+  toolName?: string,
 ) {
   // Load messages from DB and format for Anthropic
   const dbMessages: any[] = getMessagesByConversation(conversationId);
@@ -32,9 +33,10 @@ export async function runStream(
   const systemPrompt = CLINICAL_INTERVIEW;
 
   // Stream from Claude
-  const stream = streamMessage(messages, systemPrompt, [collectDemographicsTool]);
+  const tool = toolName ? tools[toolName] : undefined;
+  const stream = streamMessage(messages, systemPrompt, tool ? [tool] : undefined);
   let fullText = "";
-  const toolUseBlocks: ToolUseBlock[] = [];
+  const toolCalls: ToolCall[] = [];
 
   stream.on("text", (text) => {
     fullText += text;
@@ -43,7 +45,7 @@ export async function runStream(
 
   stream.on("contentBlock", (block) => {
     if (block.type === "tool_use") {
-      toolUseBlocks.push({ id: block.id, name: block.name, input: block.input });
+      toolCalls.push({ id: block.id, name: block.name, input: block.input });
     }
   });
 
@@ -53,24 +55,24 @@ export async function runStream(
 
   stream.on("end", () => {
     // Save assistant message
-    if (toolUseBlocks.length > 0) {
+    if (toolCalls.length > 0) {
       const contentBlocks: any[] = [];
       if (fullText) {
         contentBlocks.push({ type: "text", text: fullText });
       }
-      for (const block of toolUseBlocks) {
+      for (const tool of toolCalls) {
         contentBlocks.push({
           type: "tool_use",
-          id: block.id,
-          name: block.name,
-          input: block.input,
+          id: tool.id,
+          name: tool.name,
+          input: tool.input,
         });
       }
       createMessage(conversationId, "assistant", JSON.stringify(contentBlocks));
 
       // Notify client of each tool call
-      for (const block of toolUseBlocks) {
-        onToolUse(block);
+      for (const tool of toolCalls) {
+        onToolUse(tool);
       }
     } else {
       createMessage(conversationId, "assistant", fullText);

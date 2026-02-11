@@ -1,6 +1,7 @@
 import express from "express";
 import { createConversation } from "../db/queries/conversations";
 import { createMessage, getMessagesByConversation } from "../db/queries/messages";
+import { getProfileByConversation } from "../db/queries/profiles";
 import { runStream } from "../services/conversation";
 
 const router = express.Router();
@@ -35,12 +36,16 @@ router.get("/conversation/:conversationId/stream", async (req, res) => {
     if (!closed) res.write(`data: ${JSON.stringify(data)}\n\n`);
   };
 
+  const profile = getProfileByConversation(conversationId);
+  const toolName = profile ? undefined : "collect_demographics";
+
   await runStream(
     conversationId,
     (text) => send({ text }),
     (tool) => send({ tool }),
     () => { send({ done: true }); res.end(); },
     () => { send({ error: "Stream failed" }); res.end(); },
+    toolName,
   );
 });
 
