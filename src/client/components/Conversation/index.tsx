@@ -11,6 +11,7 @@ const Conversation = () => {
   const [message, setMessage] = useState("");
   const [streaming, setStreaming] = useState(false);
   const textAreaRef = useRef<TextAreaHandle>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   // Helper functions
 
@@ -70,6 +71,10 @@ const Conversation = () => {
         </div>
       ));
 
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   // Component mounting
 
   useEffect(() => {
@@ -98,6 +103,7 @@ const Conversation = () => {
         <div className="flex-1 py-4">
           {renderMessages()}
           {streaming && !messages[messages.length - 1]?.content && <TypingIndicator />}
+          <div ref={bottomRef} />
         </div>
 
         {/* Input area */}
