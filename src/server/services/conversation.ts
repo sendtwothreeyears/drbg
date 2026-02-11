@@ -1,5 +1,8 @@
 import { streamMessage } from "../anthropic";
-import { getMessagesByConversation, createMessage } from "../db/queries/messages";
+import {
+  getMessagesByConversation,
+  createMessage,
+} from "../db/queries/messages";
 import tools from "../tools";
 import CLINICAL_INTERVIEW from "../prompts/CLINICAL_INTERVIEW";
 
@@ -34,7 +37,11 @@ export async function runStream(
 
   // Stream from Claude
   const tool = toolName ? tools[toolName] : undefined;
-  const stream = streamMessage(messages, systemPrompt, tool ? [tool] : undefined);
+  const stream = streamMessage(
+    messages,
+    systemPrompt,
+    tool ? [tool] : undefined,
+  );
   let fullText = "";
   const toolCalls: ToolCall[] = [];
 
@@ -44,6 +51,7 @@ export async function runStream(
   });
 
   stream.on("contentBlock", (block) => {
+    // Where Claude determines we need to use a tool
     if (block.type === "tool_use") {
       toolCalls.push({ id: block.id, name: block.name, input: block.input });
     }
@@ -54,12 +62,12 @@ export async function runStream(
   });
 
   stream.on("end", () => {
-    // Save assistant message
     if (toolCalls.length > 0) {
       const contentBlocks: any[] = [];
       if (fullText) {
         contentBlocks.push({ type: "text", text: fullText });
       }
+      // When we have tools that need to be used, we send them back to the client
       for (const tool of toolCalls) {
         contentBlocks.push({
           type: "tool_use",

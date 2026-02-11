@@ -10,4 +10,16 @@ const getAllConversations = async () => {
   return await axios.get("/api/conversations");
 };
 
-export { createNewConversation, getAllConversations };
+const submitDemographics = async (
+  conversationId: string,
+  toolUseId: string,
+  age: number,
+  biologicalSex: string,
+) => {
+  return await axios.post(
+    `/api/conversation/${conversationId}/demographics`,
+    { toolUseId, age, biologicalSex },
+  );
+};
+
+export { createNewConversation, getAllConversations, submitDemographics };

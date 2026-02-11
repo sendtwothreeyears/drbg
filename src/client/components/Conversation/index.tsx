@@ -1,9 +1,23 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
+import { submitDemographics } from "../../services/api";
 import TextArea, { TextAreaHandle } from "../../shared/TextArea";
 import { startStream, ToolUseEvent } from "../../services/stream";
 import TypingIndicator from "../../shared/TypingIndicator";
+import DemographicsForm from "../DemographicsForm";
+
+const getDisplayText = (content: string): string => {
+  try {
+    const blocks = JSON.parse(content);
+    if (!Array.isArray(blocks)) return content;
+    const textBlock = blocks.find((b: any) => b.type === "text");
+    if (textBlock) return textBlock.text;
+    return "";
+  } catch {
+    return content;
+  }
+};
 
 const Conversation = () => {
   const { conversationId } = useParams();
@@ -20,7 +34,9 @@ const Conversation = () => {
     setStreaming(true);
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
     startStream(
+      // conversationId
       conversationId!,
+      // onText
       (text) => {
         setMessages((prev) => {
           const updated = [...prev];
@@ -32,15 +48,23 @@ const Conversation = () => {
           return updated;
         });
       },
+      // onDone
       () => {
         setStreaming(false);
         textAreaRef.current?.focus();
       },
+      // onToolUse
       (tool) => {
         setPendingTool(tool);
         setStreaming(false);
       },
     );
+  };
+
+  const handleDemographicsSubmit = async (age: number, biologicalSex: string) => {
+    await submitDemographics(conversationId!, pendingTool!.id, age, biologicalSex);
+    setPendingTool(null);
+    streamResponse();
   };
 
   const handleSend = async () => {
@@ -71,17 +95,17 @@ const Conversation = () => {
                 : "bg-white text-gray-800 rounded-bl-sm"
             }`}
           >
-            {msg.content}
+            {getDisplayText(msg.content)}
           </div>
         </div>
       ));
 
+  // Scroll Down after every new message
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Component mounting
-
+  // Component Mounting
   useEffect(() => {
     const load = async () => {
       const { data } = await axios.get(`/api/conversation/${conversationId}`);
@@ -91,6 +115,20 @@ const Conversation = () => {
       const lastMessage = data.messages[data.messages.length - 1];
       if (lastMessage?.role === "user") {
         streamResponse();
+      } else if (lastMessage?.role === "assistant") {
+        try {
+          const blocks = JSON.parse(lastMessage.content);
+          if (Array.isArray(blocks)) {
+            const toolBlock = blocks.find((b: any) => b.type === "tool_use");
+            if (toolBlock) {
+              setPendingTool({
+                id: toolBlock.id,
+                name: toolBlock.name,
+                input: toolBlock.input,
+              });
+            }
+          }
+        } catch {}
       }
     };
     load();
@@ -107,7 +145,12 @@ const Conversation = () => {
         {/* Messages area */}
         <div className="flex-1 py-4">
           {renderMessages()}
-          {streaming && !messages[messages.length - 1]?.content && <TypingIndicator />}
+          {streaming && !messages[messages.length - 1]?.content && (
+            <TypingIndicator />
+          )}
+          {pendingTool?.name === "collect_demographics" && (
+            <DemographicsForm onSubmit={handleDemographicsSubmit} />
+          )}
           <div ref={bottomRef} />
         </div>
 

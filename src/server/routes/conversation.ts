@@ -1,7 +1,7 @@
 import express from "express";
 import { createConversation } from "../db/queries/conversations";
 import { createMessage, getMessagesByConversation } from "../db/queries/messages";
-import { getProfileByConversation } from "../db/queries/profiles";
+import { createProfile, getProfileByConversation } from "../db/queries/profiles";
 import { runStream } from "../services/conversation";
 
 const router = express.Router();
@@ -47,6 +47,22 @@ router.get("/conversation/:conversationId/stream", async (req, res) => {
     () => { send({ error: "Stream failed" }); res.end(); },
     toolName,
   );
+});
+
+router.post("/conversation/:conversationId/demographics", (req, res) => {
+  const { conversationId } = req.params;
+  const { toolUseId, age, biologicalSex } = req.body;
+
+  createProfile(conversationId, age, biologicalSex);
+
+  const toolResultContent = JSON.stringify([{
+    type: "tool_result",
+    tool_use_id: toolUseId,
+    content: `Patient demographics collected: Age ${age}, Sex ${biologicalSex}`,
+  }]);
+  createMessage(conversationId, "user", toolResultContent);
+
+  res.json({ success: true });
 });
 
 router.get("/conversation/:conversationId", (req, res) => {
