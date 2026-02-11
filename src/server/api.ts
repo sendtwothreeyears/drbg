@@ -1,16 +1,39 @@
 import Anthropic from "@anthropic-ai/sdk";
+import prompts from "./prompts";
 
 const client = new Anthropic({
   apiKey: process.env["ANTHROPIC_API_KEY"],
 });
 
-const getParams = (message: string): Anthropic.MessageCreateParams => ({
-  max_tokens: 1024,
-  messages: [{ role: "user", content: `${message}` }],
-  model: "claude-haiku-4-5-20251001",
-});
+type StreamOptions = {
+  messages: Anthropic.MessageParam[];
+  system: string;
+  tools?: Anthropic.Tool[];
+};
 
-export const sendMessage = async (message: string) => {
-  const response = await client.messages.create(getParams(message));
-  return response;
+export const streamMessage = ({ messages, system, tools }: StreamOptions) => {
+  const params: Anthropic.MessageCreateParams = {
+    max_tokens: 1024,
+    system,
+    messages,
+    model: "claude-haiku-4-5-20251001",
+    ...(tools && tools.length > 0 ? { tools } : {}),
+  };
+  return client.messages.stream(params);
+};
+
+export const generateTitle = async (userMessage: string): Promise<string> => {
+  try {
+    const response = await client.messages.create({
+      max_tokens: 30,
+      system: prompts["TITLE_GENERATION"],
+      messages: [{ role: "user", content: userMessage }],
+      model: "claude-haiku-4-5-20251001",
+    });
+    const block = response.content[0];
+    const text = block.type === "text" ? block.text.trim() : "";
+    return text || "Untitled conversation";
+  } catch {
+    return "Untitled conversation";
+  }
 };

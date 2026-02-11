@@ -21,6 +21,7 @@ const GetStarted = ({ onStartConversation }: GetStartedProps) => {
       <TextArea
         value={message}
         onChange={setMessage}
+        onSubmit={() => onStartConversation(message)}
         placeholder="Describe your symptoms..."
       />
       <div className="flex justify-end">
