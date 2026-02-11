@@ -38,6 +38,7 @@ router.get("/conversation/:conversationId/stream", async (req, res) => {
   await runStream(
     conversationId,
     (text) => send({ text }),
+    (tool) => send({ tool }),
     () => { send({ done: true }); res.end(); },
     () => { send({ error: "Stream failed" }); res.end(); },
   );

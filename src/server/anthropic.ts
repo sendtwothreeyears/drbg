@@ -7,11 +7,13 @@ const client = new Anthropic({
 export const streamMessage = (
   messages: Anthropic.MessageParam[],
   system: string,
+  tools?: Anthropic.Tool[],
 ) => {
   return client.messages.stream({
     model: "claude-opus-4-6",
     max_tokens: 1024,
     system,
     messages,
+    ...(tools && tools.length > 0 ? { tools } : {}),
   });
 };
