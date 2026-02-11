@@ -8,9 +8,9 @@ const DB_PATH = join(__dirname, "cb.db");
 const schema = readFileSync(join(__dirname, "schema.sql"), "utf-8");
 const reset = process.argv.includes("--reset");
 
-if (reset && existsSync(DB_PATH)) {
-  unlinkSync(DB_PATH);
-  console.log("Deleted the database");
+if (reset) {
+  if (existsSync(DB_PATH)) unlinkSync(DB_PATH);
+  console.log("Database reset");
 }
 
 const db = new Database(DB_PATH);

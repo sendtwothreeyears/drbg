@@ -1,14 +1,15 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import TextArea from "../../shared/TextArea";
+import Spinner from "../../shared/Spinner";
 import { sendBotMessage } from "../../services/api";
-import { send } from "vite";
-import { kill } from "process";
 
 type GetStartedProps = {
   onStartConversation: (message: string) => void;
+  loading: boolean;
 };
 
-const GetStarted = ({ onStartConversation }: GetStartedProps) => {
+const GetStarted = ({ onStartConversation, loading }: GetStartedProps) => {
   const [message, setMessage] = useState("");
 
   return (
@@ -27,23 +28,35 @@ const GetStarted = ({ onStartConversation }: GetStartedProps) => {
         placeholder="Describe your symptoms..."
       />
       <div className="flex justify-end">
-        <button
-          onClick={() => onStartConversation(message)}
-          className="bg-slate-800 py-2 px-4 rounded-sm text-white"
-        >
-          Get Started
-        </button>
+        {loading ? (
+          <Spinner />
+        ) : (
+          <button
+            onClick={() => onStartConversation(message)}
+            disabled={!message.trim()}
+            className="bg-slate-800 py-2 px-4 rounded-sm text-white disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Get Started
+          </button>
+        )}
       </div>
     </div>
   );
 };
 
 const Home = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+
   const onStartConversation = async (message: string) => {
     try {
-      const data = await sendBotMessage(message);
+      setLoading(true);
+      const { data } = await sendBotMessage(message);
+      navigate(`/conversation/${data.conversationId}`);
     } catch (err) {
       console.log("Here is an error", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -67,7 +80,7 @@ const Home = () => {
           <div className="py-2">What symptoms are you experiencing?</div>
         </div>
         {/* Entry point for AI documenter */}
-        <GetStarted onStartConversation={onStartConversation} />
+        <GetStarted onStartConversation={onStartConversation} loading={loading} />
       </div>
     </div>
   );
