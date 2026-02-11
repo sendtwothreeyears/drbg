@@ -14,8 +14,13 @@ import {
   getLastUserMessage,
 } from "./db/queries/messages";
 import { createProfile, getProfileByConversation } from "./db/queries/profiles";
+import {
+  createFindings,
+  getFindingsByConversation,
+} from "./db/queries/findings";
 import { buildClinicalInterviewPrompt } from "./prompts/CLINICAL_INTERVIEW";
 import { collectDemographicsTool } from "./tools/demographics";
+import { recordClinicalFindingTool } from "./tools/extraction";
 
 const app = express();
 const router = express.Router();
@@ -30,6 +35,141 @@ const tryParseJSON = (str: string) => {
   } catch {}
   return null;
 };
+
+type LoopResult = "done" | "awaiting_client";
+
+async function runStreamLoop(
+  conversationId: string,
+  sseSend: (data: object) => void,
+  isClosed: () => boolean,
+): Promise<LoopResult> {
+  // Rebuild history fresh each iteration
+  const allMessages: any[] = getMessagesByConversation(conversationId);
+  const history = allMessages
+    .map((m) => {
+      const jsonContent = tryParseJSON(m.content);
+      return {
+        role: m.role as "user" | "assistant",
+        content: jsonContent || m.content,
+      };
+    })
+    .filter((_, i, arr) => !(i === 0 && arr[0].role === "assistant"));
+
+  // Look up profile + findings, build prompt, set tools
+  const profile: any = getProfileByConversation(conversationId);
+  const findings = profile
+    ? getFindingsByConversation(conversationId)
+    : undefined;
+  const systemPrompt = buildClinicalInterviewPrompt(
+    profile || undefined,
+    findings,
+  );
+  const tools = profile
+    ? [recordClinicalFindingTool]
+    : [collectDemographicsTool];
+
+  // Stream the response
+  let fullText = "";
+  const toolUseBlocks: { id: string; name: string; input: any }[] = [];
+
+  const stream = streamMessage({ messages: history, system: systemPrompt, tools });
+  stream.finalMessage().catch(() => {});
+
+  return new Promise<LoopResult>((resolve, reject) => {
+    stream.on("text", (text) => {
+      if (isClosed()) return;
+      fullText += text;
+      sseSend({ text });
+    });
+
+    stream.on("contentBlock", (block) => {
+      if (isClosed()) return;
+      if (block.type === "tool_use") {
+        toolUseBlocks.push({ id: block.id, name: block.name, input: block.input });
+      }
+    });
+
+    stream.on("error", (err) => {
+      console.error("Anthropic stream error:", err);
+      if (!isClosed()) {
+        sseSend({ error: "Stream failed" });
+      }
+      reject(err);
+    });
+
+    stream.on("end", async () => {
+      try {
+        // Classify tool blocks
+        const silentBlocks = toolUseBlocks.filter(
+          (b) => b.name === "record_clinical_finding",
+        );
+        const clientBlocks = toolUseBlocks.filter(
+          (b) => b.name !== "record_clinical_finding",
+        );
+
+        // Save assistant message
+        if (toolUseBlocks.length > 0) {
+          const contentBlocks: any[] = [];
+          if (fullText) {
+            contentBlocks.push({ type: "text", text: fullText });
+          }
+          for (const block of toolUseBlocks) {
+            contentBlocks.push({
+              type: "tool_use",
+              id: block.id,
+              name: block.name,
+              input: block.input,
+            });
+          }
+          createMessage(
+            conversationId,
+            "assistant",
+            JSON.stringify(contentBlocks),
+          );
+        } else {
+          createMessage(conversationId, "assistant", fullText);
+        }
+
+        // Handle silent tools (record_clinical_finding) — save and finish, no loop
+        if (silentBlocks.length > 0) {
+          for (const block of silentBlocks) {
+            const input = block.input as { findings: { category: string; value: string }[] };
+            createFindings(conversationId, input.findings);
+
+            // Save tool_result message so history is well-formed for next turn
+            const toolResultContent = JSON.stringify([
+              {
+                type: "tool_result",
+                tool_use_id: block.id,
+                content: `Recorded ${input.findings.length} clinical finding(s).`,
+              },
+            ]);
+            createMessage(conversationId, "user", toolResultContent);
+          }
+          resolve("done");
+          return;
+        }
+
+        // Handle client tools (collect_demographics)
+        if (clientBlocks.length > 0) {
+          for (const block of clientBlocks) {
+            if (!isClosed()) {
+              sseSend({ tool_use: block });
+            }
+          }
+          resolve("awaiting_client");
+          return;
+        }
+
+        // No tools — we're done
+        resolve("done");
+      } catch (err) {
+        console.error("Failed to process stream end:", err);
+        reject(err);
+      }
+    });
+  });
+}
 
 router.post("/create", (req, res) => {
   const { message } = req.body;
@@ -53,102 +193,54 @@ router.post("/conversation/:conversationId/message", (req, res) => {
 
 router.get("/conversation/:conversationId/stream", async (req, res) => {
   const { conversationId } = req.params;
-  const allMessages: any[] = getMessagesByConversation(conversationId);
-
-  // Build message history — parse JSON content blocks for tool_use/tool_result messages
-  const history = allMessages
-    .map((m) => {
-      const jsonContent = tryParseJSON(m.content);
-      return {
-        role: m.role as "user" | "assistant",
-        content: jsonContent || m.content,
-      };
-    })
-    .filter((_, i, arr) => !(i === 0 && arr[0].role === "assistant"));
-
-  // Look up profile and build system prompt
-  const profile: any = getProfileByConversation(conversationId);
-  const systemPrompt = buildClinicalInterviewPrompt(profile || undefined);
-  const tools = profile ? undefined : [collectDemographicsTool];
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
-  let fullText = "";
-  let toolUseBlock: { id: string; name: string; input: any } | null = null;
   let closed = false;
-  const stream = streamMessage({ messages: history, system: systemPrompt, tools });
-  // Swallow async rejections from abort so they don't crash the process
-  stream.finalMessage().catch(() => {});
-
   req.on("close", () => {
     closed = true;
-    try { stream.abort(); } catch {}
   });
 
-  stream.on("text", (text) => {
-    if (closed) return;
-    fullText += text;
-    res.write(`data: ${JSON.stringify({ text })}\n\n`);
-  });
-
-  stream.on("contentBlock", (block) => {
-    if (closed) return;
-    if (block.type === "tool_use") {
-      toolUseBlock = { id: block.id, name: block.name, input: block.input };
-      res.write(
-        `data: ${JSON.stringify({ tool_use: toolUseBlock })}\n\n`,
-      );
-    }
-  });
-
-  stream.on("end", () => {
-    try {
-      if (toolUseBlock) {
-        // Save assistant message as JSON content array (text block + tool_use block)
-        const contentBlocks: any[] = [];
-        if (fullText) {
-          contentBlocks.push({ type: "text", text: fullText });
-        }
-        contentBlocks.push({
-          type: "tool_use",
-          id: toolUseBlock.id,
-          name: toolUseBlock.name,
-          input: toolUseBlock.input,
-        });
-        createMessage(conversationId, "assistant", JSON.stringify(contentBlocks));
-      } else {
-        createMessage(conversationId, "assistant", fullText);
-      }
-    } catch (err) {
-      console.error("Failed to save assistant message:", err);
-    }
-
+  const sseSend = (data: object) => {
     if (!closed) {
-      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    }
+  };
+
+  try {
+    const result = await runStreamLoop(
+      conversationId,
+      sseSend,
+      () => closed,
+    );
+
+    if (result === "done" && !closed) {
+      sseSend({ done: true });
+      res.end();
+    } else if (result === "awaiting_client" && !closed) {
+      sseSend({ done: true });
       res.end();
     }
-
-    // Generate title in the background
-    const conv: any = getConversation(conversationId);
-    if (!conv?.title) {
-      const firstUserMsg: any = getLastUserMessage(conversationId);
-      if (firstUserMsg?.content) {
-        generateTitle(firstUserMsg.content)
-          .then((title) => updateConversationTitle(conversationId, title))
-          .catch(() => {});
-      }
+  } catch {
+    if (!closed) {
+      sseSend({ error: "Stream failed" });
+      res.end();
     }
-  });
+  }
 
-  stream.on("error", (err) => {
-    console.error("Anthropic stream error:", err);
-    if (closed) return;
-    res.write(`data: ${JSON.stringify({ error: "Stream failed" })}\n\n`);
-    res.end();
-  });
+  // Generate title in the background
+  const conv: any = getConversation(conversationId);
+  if (!conv?.title) {
+    const firstUserMsg: any = getLastUserMessage(conversationId);
+    if (firstUserMsg?.content) {
+      generateTitle(firstUserMsg.content)
+        .then((title) => updateConversationTitle(conversationId, title))
+        .catch(() => {});
+    }
+  }
 });
 
 router.post("/conversation/:conversationId/demographics", (req, res) => {
@@ -173,6 +265,12 @@ router.post("/conversation/:conversationId/demographics", (req, res) => {
 router.get("/conversations", (_req, res) => {
   const conversations = getAllConversations();
   res.json({ conversations });
+});
+
+router.get("/conversation/:conversationId/findings", (req, res) => {
+  const { conversationId } = req.params;
+  const findings = getFindingsByConversation(conversationId);
+  res.json({ findings });
 });
 
 router.get("/conversation/:conversationId", (req, res) => {

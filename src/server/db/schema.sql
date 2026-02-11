@@ -28,3 +28,12 @@ CREATE TABLE IF NOT EXISTS user_profiles (
 	created_at TEXT DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY(conversationid) REFERENCES conversations(conversationid)
 );
+
+CREATE TABLE IF NOT EXISTS clinical_findings (
+	findingid TEXT PRIMARY KEY,
+	conversationid TEXT NOT NULL,
+	category TEXT NOT NULL CHECK(category IN ('symptom', 'location', 'onset', 'duration', 'severity', 'character', 'aggravating_factor', 'relieving_factor', 'associated_symptom', 'medical_history', 'medication', 'allergy')),
+	value TEXT NOT NULL,
+	created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY(conversationid) REFERENCES conversations(conversationid)
+);
