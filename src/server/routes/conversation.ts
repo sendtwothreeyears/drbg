@@ -17,9 +17,11 @@ router.get("/conversation/:conversationId/stream", async (req, res) => {
   // SSE - Stream initialization
   const { conversationId } = req.params;
 
+  // Prepares the headers in memory, not sent
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
+  // Send them to client immediately to start the stream, and writes data later
   res.flushHeaders();
 
   let closed = false;
@@ -28,6 +30,7 @@ router.get("/conversation/:conversationId/stream", async (req, res) => {
   });
 
   const send = (data: object) => {
+    // each res.write() during stream writes back to the response body
     if (!closed) res.write(`data: ${JSON.stringify(data)}\n\n`);
   };
 
@@ -36,11 +39,11 @@ router.get("/conversation/:conversationId/stream", async (req, res) => {
 
   await runStream(
     conversationId,
-    // onText
+    // onText -> sends chunked messages back to client
     (text) => send({ text }),
-    // onToolUse
+    // onTool -> sends chunked messages back to client, notifies if there is a tool
     (tool) => send({ tool }),
-    // onDone
+    // onDone -> sends final message back to user, ends connection
     () => {
       send({ done: true });
       res.end();

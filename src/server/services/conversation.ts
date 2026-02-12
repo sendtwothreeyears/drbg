@@ -12,6 +12,7 @@ import { tryParseJSON } from "../utils";
 
 const systemPrompt = CLINICAL_INTERVIEW;
 
+// initiates stream, provides functions to use DURING stream
 export async function runStream(
   conversationId: string,
   onText: (text: string) => void,
@@ -27,6 +28,7 @@ export async function runStream(
   const messages = dbMessages
     .map((m) => ({
       role: m.role as "user" | "assistant",
+      // If we have an array of messages, it's prompting the client-side tool
       content: tryParseJSON(m.content) || m.content,
     }))
     .filter((_, i, arr) => !(i === 0 && arr[0].role === "assistant"));
@@ -40,10 +42,13 @@ export async function runStream(
     systemPrompt,
     tool ? [tool] : undefined,
   );
+
+  // defined ONCE before streaming
   let fullText = "";
   const toolCalls: ToolCall[] = [];
 
-  // Start Streaming
+  // Start Streaming, gradually appending text to fullText, sending back to
+  // client in chunks
   stream.on("text", (text) => {
     fullText += text;
     onText(text);
@@ -67,6 +72,7 @@ export async function runStream(
     // Stream completion after a tool has been selected.
     // these are for tools that were PASSED IN.
     if (toolCalls.length > 0) {
+      // ⚠️ DEFINE THIS
       const contentBlocks: any[] = [];
       if (fullText) {
         contentBlocks.push({ type: "text", text: fullText });
