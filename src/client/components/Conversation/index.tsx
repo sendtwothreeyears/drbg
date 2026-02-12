@@ -6,6 +6,7 @@ import TextArea, { TextAreaHandle } from "../../shared/TextArea";
 import { startStream, ToolUseEvent } from "../../services/stream";
 import TypingIndicator from "../../shared/TypingIndicator";
 import DemographicsForm from "../DemographicsForm";
+import FindingsPanel, { FindingsPanelHandle } from "../FindingsPanel";
 
 const getDisplayText = (content: string): string => {
   try {
@@ -25,11 +26,12 @@ const Conversation = () => {
   const [message, setMessage] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [pendingTool, setPendingTool] = useState<ToolUseEvent | null>(null);
+  const [showFindings, setShowFindings] = useState(false);
   const textAreaRef = useRef<TextAreaHandle>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const findingsRef = useRef<FindingsPanelHandle>(null);
 
   // Helper functions
-
   const streamResponse = () => {
     setStreaming(true);
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
@@ -52,6 +54,7 @@ const Conversation = () => {
       () => {
         setStreaming(false);
         textAreaRef.current?.focus();
+        findingsRef.current?.refresh();
       },
       // onToolUse
       (tool) => {
@@ -61,8 +64,16 @@ const Conversation = () => {
     );
   };
 
-  const handleDemographicsSubmit = async (age: number, biologicalSex: string) => {
-    await submitDemographics(conversationId!, pendingTool!.id, age, biologicalSex);
+  const handleDemographicsSubmit = async (
+    age: number,
+    biologicalSex: string,
+  ) => {
+    await submitDemographics(
+      conversationId!,
+      pendingTool!.id,
+      age,
+      biologicalSex,
+    );
     setPendingTool(null);
     streamResponse();
   };
@@ -135,27 +146,41 @@ const Conversation = () => {
   }, [conversationId]);
 
   return (
-    <div className="min-h-screen bg-body flex">
-      <div className="flex flex-col flex-1 max-w-2xl mx-auto">
+    <div className="h-screen bg-body flex overflow-hidden">
+      <div className="flex flex-col flex-1 min-w-0">
         {/* Header */}
-        <div className="flex items-center justify-between pt-8 pb-4">
-          <div className="font-ddn font-semibold text-3xl">Dr. Bogan</div>
+        <div className="shrink-0 max-w-2xl w-full mx-auto">
+          <div className="flex items-center justify-between pt-8 pb-4">
+            <div className="font-ddn font-semibold text-3xl">Dr. Bogan</div>
+            <button
+              onClick={() => setShowFindings((prev) => !prev)}
+              className={`font-fakt text-sm px-3 py-1.5 rounded-lg transition-colors ${
+                showFindings
+                  ? "bg-slate-800 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              Findings
+            </button>
+          </div>
         </div>
 
         {/* Messages area */}
-        <div className="flex-1 py-4">
-          {renderMessages()}
-          {streaming && !messages[messages.length - 1]?.content && (
-            <TypingIndicator />
-          )}
-          {pendingTool?.name === "collect_demographics" && (
-            <DemographicsForm onSubmit={handleDemographicsSubmit} />
-          )}
-          <div ref={bottomRef} />
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-2xl mx-auto py-4">
+            {renderMessages()}
+            {streaming && !messages[messages.length - 1]?.content && (
+              <TypingIndicator />
+            )}
+            {pendingTool?.name === "collect_demographics" && (
+              <DemographicsForm onSubmit={handleDemographicsSubmit} />
+            )}
+            <div ref={bottomRef} />
+          </div>
         </div>
 
         {/* Input area */}
-        <div className="sticky bottom-0 bg-body pb-4">
+        <div className="shrink-0 bg-body pb-4 max-w-2xl w-full mx-auto">
           <div className="bg-white p-2 rounded-lg shadow-sm border-gray-200">
             <TextArea
               ref={textAreaRef}
@@ -186,6 +211,13 @@ const Conversation = () => {
           </div>
         </div>
       </div>
+
+      {/* Findings side panel */}
+      {showFindings && (
+        <div className="w-80 border-l border-gray-200 bg-body shrink-0 overflow-y-auto">
+          <FindingsPanel ref={findingsRef} conversationId={conversationId!} />
+        </div>
+      )}
     </div>
   );
 };

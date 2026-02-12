@@ -17,3 +17,18 @@ export const streamMessage = (
     ...(tools && tools.length > 0 ? { tools } : {}),
   });
 };
+
+export const createToolMessage = (
+  system: string,
+  userMessage: string,
+  tool: Anthropic.Tool,
+) => {
+  return client.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 1024,
+    system,
+    messages: [{ role: "user", content: userMessage }],
+    tools: [tool],
+    tool_choice: { type: "tool", name: tool.name },
+  });
+};
