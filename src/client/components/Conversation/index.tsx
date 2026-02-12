@@ -29,7 +29,6 @@ const Conversation = () => {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Helper functions
-
   const streamResponse = () => {
     setStreaming(true);
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
@@ -61,8 +60,16 @@ const Conversation = () => {
     );
   };
 
-  const handleDemographicsSubmit = async (age: number, biologicalSex: string) => {
-    await submitDemographics(conversationId!, pendingTool!.id, age, biologicalSex);
+  const handleDemographicsSubmit = async (
+    age: number,
+    biologicalSex: string,
+  ) => {
+    await submitDemographics(
+      conversationId!,
+      pendingTool!.id,
+      age,
+      biologicalSex,
+    );
     setPendingTool(null);
     streamResponse();
   };

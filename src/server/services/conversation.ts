@@ -5,6 +5,7 @@ import {
 } from "../db/queries/messages";
 import tools from "../tools";
 import CLINICAL_INTERVIEW from "../prompts/CLINICAL_INTERVIEW";
+import { extractFindings } from "./extraction";
 
 const tryParseJSON = (str: string) => {
   try {
@@ -84,6 +85,12 @@ export async function runStream(
       }
     } else {
       createMessage(conversationId, "assistant", fullText);
+    }
+
+    // Extract clinical findings in the background
+    const lastUserMsg = dbMessages.findLast((m: any) => m.role === "user");
+    if (lastUserMsg) {
+      extractFindings(conversationId, lastUserMsg.content);
     }
 
     onDone();
