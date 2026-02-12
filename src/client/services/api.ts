@@ -22,4 +22,8 @@ const submitDemographics = async (
   );
 };
 
-export { createNewConversation, getAllConversations, submitDemographics };
+const getFindings = async (conversationId: string) => {
+  return await axios.get(`/api/conversation/${conversationId}/findings`);
+};
+
+export { createNewConversation, getAllConversations, submitDemographics, getFindings };

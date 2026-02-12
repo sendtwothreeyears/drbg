@@ -1,6 +1,5 @@
 import { useState, useEffect, useImperativeHandle, forwardRef, useCallback } from "react";
 import { getFindings } from "../../services/api";
-import Spinner from "../../shared/Spinner";
 
 type Finding = {
   category: string;
@@ -53,7 +52,7 @@ const FindingsPanel = forwardRef<FindingsPanelHandle, { conversationId: string }
     if (loading) {
       return (
         <div className="flex items-center justify-center h-full">
-          <Spinner />
+          <div className="font-fakt text-sm text-gray-400">Loading...</div>
         </div>
       );
     }

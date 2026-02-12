@@ -62,7 +62,7 @@ export async function runStream(
     onError(err);
   });
 
-  stream.on("end", () => {
+  stream.on("end", async () => {
     if (toolCalls.length > 0) {
       const contentBlocks: any[] = [];
       if (fullText) {
@@ -87,10 +87,10 @@ export async function runStream(
       createMessage(conversationId, "assistant", fullText);
     }
 
-    // Extract clinical findings in the background
+    // Extract clinical findings before signaling done
     const lastUserMsg = dbMessages.findLast((m: any) => m.role === "user");
     if (lastUserMsg) {
-      extractFindings(conversationId, lastUserMsg.content);
+      await extractFindings(conversationId, lastUserMsg.content);
     }
 
     onDone();

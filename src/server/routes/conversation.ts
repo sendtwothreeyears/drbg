@@ -2,6 +2,7 @@ import express from "express";
 import { createConversation } from "../db/queries/conversations";
 import { createMessage, getMessagesByConversation } from "../db/queries/messages";
 import { createProfile, getProfileByConversation } from "../db/queries/profiles";
+import { getFindingsByConversation } from "../db/queries/findings";
 import { runStream } from "../services/conversation";
 
 const router = express.Router();
@@ -63,6 +64,12 @@ router.post("/conversation/:conversationId/demographics", (req, res) => {
   createMessage(conversationId, "user", toolResultContent);
 
   res.json({ success: true });
+});
+
+router.get("/conversation/:conversationId/findings", (req, res) => {
+  const { conversationId } = req.params;
+  const findings = getFindingsByConversation(conversationId);
+  res.json({ findings });
 });
 
 router.get("/conversation/:conversationId", (req, res) => {
