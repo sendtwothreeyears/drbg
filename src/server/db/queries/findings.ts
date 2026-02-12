@@ -1,6 +1,6 @@
 import db from "../";
 import { randomUUID } from "crypto";
-import type { Finding } from "../../types";
+import type { Finding } from "../../../types";
 
 const createFindings = (conversationId: string, findings: Finding[]) => {
   const insert = db.prepare(

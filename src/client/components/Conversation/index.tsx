@@ -1,24 +1,20 @@
+// GLOBAL IMPORTS
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
-import { submitDemographics } from "../../services/api";
-import TextArea, { TextAreaHandle } from "../../shared/TextArea";
-import { startStream, ToolUseEvent } from "../../services/stream";
-import TypingIndicator from "../../shared/TypingIndicator";
-import DemographicsForm from "../DemographicsForm";
-import FindingsPanel, { FindingsPanelHandle } from "../FindingsPanel";
 
-const getDisplayText = (content: string): string => {
-  try {
-    const blocks = JSON.parse(content);
-    if (!Array.isArray(blocks)) return content;
-    const textBlock = blocks.find((b: any) => b.type === "text");
-    if (textBlock) return textBlock.text;
-    return "";
-  } catch {
-    return content;
-  }
-};
+// SERVICES LAYER
+import { submitDemographics } from "../../services/api";
+
+// COMPONENTS
+import TextArea, { TextAreaHandle } from "../../shared/TextArea";
+import TypingIndicator from "../../shared/TypingIndicator";
+import DemographicsForm from "./DemographicsForm";
+import FindingsPanel, { FindingsPanelHandle } from "./FindingsPanel";
+
+// UTILITY IMPORTS
+import { startStream, ToolUseEvent } from "../../services/stream";
+import { getDisplayText } from "../../utils";
 
 const Conversation = () => {
   const { conversationId } = useParams();
@@ -31,12 +27,12 @@ const Conversation = () => {
   const bottomRef = useRef<HTMLDivElement>(null);
   const findingsRef = useRef<FindingsPanelHandle>(null);
 
-  // Helper functions
   const streamResponse = () => {
     setStreaming(true);
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+
+    // Only start stream with the message to add is from an ASSISTANT
     startStream(
-      // conversationId
       conversationId!,
       // onText
       (text) => {
@@ -45,21 +41,24 @@ const Conversation = () => {
           const last = updated[updated.length - 1];
           updated[updated.length - 1] = {
             ...last,
+            // adding the chunk
             content: last.content + text,
           };
           return updated;
         });
+      },
+      // onToolUse - how we use the tool that is returned
+      (tool) => {
+        setPendingTool(tool);
+        // if we have a tool - the stream has already ended
+        // reset streaming UI behavior
+        setStreaming(false);
       },
       // onDone
       () => {
         setStreaming(false);
         textAreaRef.current?.focus();
         findingsRef.current?.refresh();
-      },
-      // onToolUse
-      (tool) => {
-        setPendingTool(tool);
-        setStreaming(false);
       },
     );
   };
@@ -86,6 +85,8 @@ const Conversation = () => {
     await axios.post(`/api/conversation/${conversationId}/message`, {
       message: text,
     });
+    // When the page loads, and the last message is a completed message from the
+    // AI, the streaming response kicks off again AFTER the user submits a message.
     streamResponse();
   };
 
@@ -125,8 +126,12 @@ const Conversation = () => {
 
       const lastMessage = data.messages[data.messages.length - 1];
       if (lastMessage?.role === "user") {
+        // optimistic UI -> on page load, and the last message is currently from the user,
+        // we start streaming automatically.
         streamResponse();
-      } else if (lastMessage?.role === "assistant") {
+      }
+      // if the last message is from the AI, and it is showing a tool, display the tool.
+      else if (lastMessage?.role === "assistant") {
         try {
           const blocks = JSON.parse(lastMessage.content);
           if (Array.isArray(blocks)) {
