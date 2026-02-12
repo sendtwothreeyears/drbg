@@ -1,21 +1,16 @@
-import { streamMessage } from "../anthropic";
+import { createChatStream } from "../anthropic";
 import {
   getMessagesByConversation,
   createMessage,
 } from "../db/queries/messages";
-import tools from "../tools";
+import tools from "../anthropicTools";
 import CLINICAL_INTERVIEW from "../prompts/CLINICAL_INTERVIEW";
 import { extractFindings } from "./extraction";
 
-const tryParseJSON = (str: string) => {
-  try {
-    const parsed = JSON.parse(str);
-    if (Array.isArray(parsed)) return parsed;
-  } catch {}
-  return null;
-};
+import { ToolCall, Message } from "../../types";
+import { tryParseJSON } from "../utils";
 
-type ToolCall = { id: string; name: string; input: any };
+const systemPrompt = CLINICAL_INTERVIEW;
 
 export async function runStream(
   conversationId: string,
@@ -25,8 +20,10 @@ export async function runStream(
   onError: (err: Error) => void,
   toolName?: string,
 ) {
-  // Load messages from DB and format for Anthropic
-  const dbMessages: any[] = getMessagesByConversation(conversationId);
+  // Fetches the messages ONCE before the stream starts
+  const dbMessages: Message[] = getMessagesByConversation(conversationId);
+
+  // Maps the messages to be Anthropic API Friendly
   const messages = dbMessages
     .map((m) => ({
       role: m.role as "user" | "assistant",
@@ -34,11 +31,11 @@ export async function runStream(
     }))
     .filter((_, i, arr) => !(i === 0 && arr[0].role === "assistant"));
 
-  const systemPrompt = CLINICAL_INTERVIEW;
-
-  // Stream from Claude
+  // Selects the tool, if we have specified one
   const tool = toolName ? tools[toolName] : undefined;
-  const stream = streamMessage(
+
+  // Initialize Anthropic Streaming, with or without tool
+  const stream = createChatStream(
     messages,
     systemPrompt,
     tool ? [tool] : undefined,
@@ -46,23 +43,29 @@ export async function runStream(
   let fullText = "";
   const toolCalls: ToolCall[] = [];
 
+  // Start Streaming
   stream.on("text", (text) => {
     fullText += text;
     onText(text);
   });
 
+  // If Claude specifies we need to use a tool, pass it back to the user
+  // This allows the client to show a pending tool (e.g. Demographics)
   stream.on("contentBlock", (block) => {
-    // Where Claude determines we need to use a tool
     if (block.type === "tool_use") {
       toolCalls.push({ id: block.id, name: block.name, input: block.input });
     }
   });
 
+  // Stream Error Handling
   stream.on("error", (err) => {
     onError(err);
   });
 
+  // Stream Completion
   stream.on("end", async () => {
+    // Stream completion after a tool has been selected.
+    // these are for tools that were PASSED IN.
     if (toolCalls.length > 0) {
       const contentBlocks: any[] = [];
       if (fullText) {
@@ -77,22 +80,27 @@ export async function runStream(
           input: tool.input,
         });
       }
+      // When stream is done, persist the FINAL Agent message into our database
       createMessage(conversationId, "assistant", JSON.stringify(contentBlocks));
 
-      // Notify client of each tool call
+      // Notify client of each tool call (which was passed in route setup)
       for (const tool of toolCalls) {
         onToolUse(tool);
       }
-    } else {
+    }
+    // If we have NO tool active
+    else {
       createMessage(conversationId, "assistant", fullText);
     }
 
     // Extract clinical findings before signaling done
-    const lastUserMsg = dbMessages.findLast((m: any) => m.role === "user");
+    const lastUserMsg = dbMessages.findLast((m: Message) => m.role === "user");
     if (lastUserMsg) {
+      // Manually call this tool after the last user message to extract clinical findings
       await extractFindings(conversationId, lastUserMsg.content);
     }
-
+    // send the message back to the user
+    // -- this writes the final data within the res response back to client
     onDone();
   });
 }

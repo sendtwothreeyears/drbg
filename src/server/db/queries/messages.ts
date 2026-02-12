@@ -1,11 +1,13 @@
 import db from "../";
 import { randomUUID } from "crypto";
 
+import { Message } from "../../../types";
+
 const createMessage = (
   conversationId: string,
-  role: string,
+  role: "user" | "assistant",
   content: string,
-) => {
+): string => {
   const id = randomUUID();
   db.prepare(
     "INSERT INTO messages (messageid, conversationid, role, content) VALUES (?, ?, ?, ?)",
@@ -13,20 +15,20 @@ const createMessage = (
   return id;
 };
 
-const getMessagesByConversation = (conversationId: string) => {
+const getMessagesByConversation = (conversationId: string): Message[] => {
   return db
     .prepare(
       "SELECT * FROM messages WHERE conversationid = ? ORDER BY created_at ASC",
     )
-    .all(conversationId);
+    .all(conversationId) as Message[];
 };
 
-const getLastUserMessage = (conversationId: string) => {
+const getLastUserMessage = (conversationId: string): Message | undefined => {
   return db
     .prepare(
       "SELECT * FROM messages WHERE conversationid = ? AND role = 'user' ORDER BY created_at DESC LIMIT 1",
     )
-    .get(conversationId);
+    .get(conversationId) as Message | undefined;
 };
 
 export { createMessage, getMessagesByConversation, getLastUserMessage };
