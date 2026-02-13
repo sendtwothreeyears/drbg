@@ -1,7 +1,7 @@
 import pool from "../";
 import { randomUUID } from "crypto";
 
-const createProfile = async (
+const createProfileMutation = async (
   conversationId: string,
   age: number,
   biologicalSex: string,
@@ -14,7 +14,7 @@ const createProfile = async (
   return id;
 };
 
-const getProfileByConversation = async (conversationId: string) => {
+const getProfileByConversationQuery = async (conversationId: string) => {
   const { rows } = await pool.query(
     "SELECT * FROM user_profiles WHERE conversationid = $1 LIMIT 1",
     [conversationId],
@@ -22,4 +22,4 @@ const getProfileByConversation = async (conversationId: string) => {
   return rows[0];
 };
 
-export { createProfile, getProfileByConversation };
+export { createProfileMutation, getProfileByConversationQuery };

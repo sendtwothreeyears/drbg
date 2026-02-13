@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 
 import { Message } from "../../../types";
 
-const createMessage = async (
+const createMessageMutation = async (
   conversationId: string,
   role: "user" | "assistant",
   content: string,
@@ -16,7 +16,7 @@ const createMessage = async (
   return id;
 };
 
-const getMessagesByConversation = async (conversationId: string): Promise<Message[]> => {
+const getMessagesByConversationQuery = async (conversationId: string): Promise<Message[]> => {
   const { rows } = await pool.query(
     "SELECT * FROM messages WHERE conversationid = $1 ORDER BY created_at ASC",
     [conversationId],
@@ -24,7 +24,7 @@ const getMessagesByConversation = async (conversationId: string): Promise<Messag
   return rows as Message[];
 };
 
-const getLastUserMessage = async (conversationId: string): Promise<Message | undefined> => {
+const getLastUserMessageQuery = async (conversationId: string): Promise<Message | undefined> => {
   const { rows } = await pool.query(
     "SELECT * FROM messages WHERE conversationid = $1 AND role = 'user' ORDER BY created_at DESC LIMIT 1",
     [conversationId],
@@ -32,4 +32,4 @@ const getLastUserMessage = async (conversationId: string): Promise<Message | und
   return rows[0] as Message | undefined;
 };
 
-export { createMessage, getMessagesByConversation, getLastUserMessage };
+export { createMessageMutation, getMessagesByConversationQuery, getLastUserMessageQuery };

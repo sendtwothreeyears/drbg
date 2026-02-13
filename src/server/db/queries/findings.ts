@@ -2,7 +2,7 @@ import pool from "../";
 import { randomUUID } from "crypto";
 import type { Finding } from "../../../types";
 
-const createFindings = async (conversationId: string, findings: Finding[]): Promise<void> => {
+const createFindingsMutation = async (conversationId: string, findings: Finding[]): Promise<void> => {
   await Promise.all(
     findings.map((f) =>
       pool.query(
@@ -13,7 +13,7 @@ const createFindings = async (conversationId: string, findings: Finding[]): Prom
   );
 };
 
-const getFindingsByConversation = async (conversationId: string): Promise<Finding[]> => {
+const getFindingsByConversationQuery = async (conversationId: string): Promise<Finding[]> => {
   const { rows } = await pool.query(
     "SELECT category, value FROM clinical_findings WHERE conversationid = $1 ORDER BY created_at",
     [conversationId],
@@ -21,4 +21,4 @@ const getFindingsByConversation = async (conversationId: string): Promise<Findin
   return rows as Finding[];
 };
 
-export { createFindings, getFindingsByConversation };
+export { createFindingsMutation, getFindingsByConversationQuery };

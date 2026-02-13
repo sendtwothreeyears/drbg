@@ -4,3 +4,5 @@ export type { Message } from "./message";
 export type { Profile } from "./profile";
 export type { ToolCall } from "./toolCall";
 export type { StreamEvent } from "./stream";
+export type { Storage } from "./storage";
+export type { ContentBlock } from "./contentBlock";

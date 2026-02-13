@@ -7,8 +7,8 @@
     "dev": "nodemon -w src/server -x tsx src/server/main.ts",
     "start": "NODE_ENV=production tsx src/server/main.ts",
     "build": "vite build",
-    "db:setup": "tsx src/server/db/setup.ts",
-    "db:reset": "tsx src/server/db/setup.ts --reset"
+    "db:setup": "tsx src/server/scripts/setup.ts",
+    "db:reset": "tsx src/server/scripts/setup.ts --reset"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
