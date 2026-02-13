@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS vector;
+
 CREATE TABLE IF NOT EXISTS users (
 	userid TEXT PRIMARY KEY,
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -36,4 +38,13 @@ CREATE TABLE IF NOT EXISTS clinical_findings (
 	value TEXT NOT NULL,
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY(conversationid) REFERENCES conversations(conversationid)
+);
+
+CREATE TABLE IF NOT EXISTS guideline_chunks (
+	chunkid TEXT PRIMARY KEY,
+	source TEXT NOT NULL,
+	section TEXT,
+	content TEXT NOT NULL,
+	embedding vector(1536),
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
