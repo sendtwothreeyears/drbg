@@ -103,7 +103,7 @@ const Conversation = () => {
           <div
             className={`font-fakt text-lg px-4 py-2 rounded-2xl max-w-[80%] ${
               msg.role === "user"
-                ? "bg-slate-800 text-white rounded-br-sm"
+                ? "bg-main text-white rounded-br-sm"
                 : "bg-white text-gray-800 rounded-bl-sm"
             }`}
           >
@@ -152,27 +152,56 @@ const Conversation = () => {
 
   return (
     <div className="h-screen bg-body flex overflow-hidden">
+      <div className="fixed top-6 left-6 z-10">
+        <a href="https://kasamd.com" target="_blank" rel="noopener noreferrer">
+          <img
+            src="/icons/themed/kasamd_green.png"
+            alt="KasaMD"
+            className="h-8"
+          />
+        </a>
+      </div>
       <div className="flex flex-col flex-1 min-w-0">
-        {/* Header */}
-        <div className="shrink-0 max-w-2xl w-full mx-auto">
-          <div className="flex items-center justify-between pt-8 pb-4">
-            <div className="font-ddn font-semibold text-3xl">Dr. Bogan</div>
-            <button
-              onClick={() => setShowFindings((prev) => !prev)}
-              className={`font-fakt text-sm px-3 py-1.5 rounded-lg transition-colors ${
-                showFindings
-                  ? "bg-slate-800 text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              Findings
-            </button>
-          </div>
-        </div>
-
         {/* Messages area */}
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-2xl mx-auto py-4">
+            {/* Header */}
+            <div className="flex items-center justify-between pt-4 pb-2">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <img
+                    src="/icons/themed/logogreen_nobg.png"
+                    alt="Boafo"
+                    className="h-10"
+                  />
+                  <div className="font-ddn font-semibold text-3xl text-main mt-[5px]">
+                    Boafo Consult
+                  </div>
+                </div>
+                <div className="font-fakt text-gray-500 text-md py-3">
+                  Consult started: Today,{" "}
+                  {new Date().toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    hour12: true,
+                  })}
+                </div>
+              </div>
+              <button
+                onClick={() => setShowFindings((prev) => !prev)}
+                className={`font-fakt text-sm px-3 py-1.5 rounded-lg transition-colors self-start ${
+                  showFindings
+                    ? "bg-slate-800 text-white"
+                    : "bg-white text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                Findings
+              </button>
+            </div>
+            <div className="font-fakt font-semibold text-main text-base my-8">
+              If this is an emergency, call 911 or your local emergency number.
+            </div>
+            <hr className="mb-4 border-outline" />
             {renderMessages()}
             {streaming && !messages[messages.length - 1]?.content && (
               <TypingIndicator />
@@ -198,7 +227,7 @@ const Conversation = () => {
               <button
                 onClick={handleSend}
                 disabled={!message.trim() || streaming}
-                className={`p-2 rounded-full text-white ${message.trim() && !streaming ? "bg-black" : "bg-gray-300"}`}
+                className={`p-2 rounded-full text-white ${message.trim() && !streaming ? "bg-main" : "bg-gray-300"}`}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
