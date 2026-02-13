@@ -88,8 +88,11 @@ function collectTextBlocks(node: any): string[] {
         if (text) blocks.push(text);
       }
     } else {
-      const text = cleanText(extractText(val));
-      if (text) blocks.push(text);
+      const items = Array.isArray(val) ? val : [val];
+      for (const item of items) {
+        const text = cleanText(typeof item === "string" ? item : extractText(item));
+        if (text) blocks.push(text);
+      }
     }
   }
   return blocks;

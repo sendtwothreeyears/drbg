@@ -177,6 +177,8 @@ npm run guidelines:parse
 
 Reads all 4,715 `.nxml` files from `data/who-guidelines/`, applies the hierarchical chunking strategy above, and outputs structured chunks to `data/who-guideline-chunks.json`.
 
+This script does **not** touch the database. The JSON file is an intermediate checkpoint between parsing and DB ingestion — it lets you inspect chunks, adjust parsing logic, and re-run without re-parsing thousands of XML files each time. The separate ingestion script (Step 3) reads this JSON, embeds each chunk via OpenAI, and inserts into the `guideline_chunks` table.
+
 #### How it implements the strategy
 
 The script uses `fast-xml-parser` to parse each `.nxml` file into a traversable object, then walks the `<sec>` tree with a recursive `chunkSection` function that implements the three-tier splitting:
@@ -220,6 +222,23 @@ These form the title hierarchy prepended to every chunk.
 - `source` — filename without `.nxml` extension, traces back to the specific archive and chapter
 - `section` — title hierarchy path, used as metadata in the `guideline_chunks` DB table
 - `content` — self-contained text with hierarchy prefix, ready for embedding
+
+#### Known limitations
+
+94% of chunks are under the 1,000 token target. The remaining 6% are oversized because they consist of a single large block (one massive table or one huge paragraph) that the paragraph-level fallback can't split further:
+
+| Range | Count |
+|-------|-------|
+| Under 1,000 | 34,702 (94%) |
+| 1,000–1,500 | 1,356 |
+| 1,500–2,000 | 348 |
+| 2,000–3,000 | 222 |
+| 3,000–5,000 | 135 |
+| 5,000+ | 61 |
+
+The oversized chunks are mostly GRADE evidence tables, systematic review summaries, and annexes — not core clinical treatment content. Embeddings for these will be more diluted but they're lower priority for retrieval.
+
+**TODO:** Add sentence-level splitting as a final fallback — when a single block exceeds the token limit, split by sentences and re-group. This would bring the remaining 6% under the target.
 
 ## Key Decisions
 - [x] Guideline sources — WHO (primary) + Ghana STGs (secondary)
