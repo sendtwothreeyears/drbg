@@ -96,7 +96,8 @@ const Home = () => {
           </div>
           <div className="font-fakt text-gray-600 font-medium text-xl pt-2">
             <div className="py-2">
-              I'm here to help you understand your symptoms. I'll guide you through a few questions.
+              I'm here to help you understand your symptoms. I'll guide you
+              through a few questions.
             </div>
             <div className="py-2">What symptoms are you experiencing?</div>
           </div>
@@ -107,7 +108,7 @@ const Home = () => {
             onStartConversation={onStartConversation}
             loading={loading}
           />
-          <div className="font-fakt text-gray-400 text-xs text-center mt-2">
+          <div className="font-fakt text-gray-400 text-sm text-center mt-2">
             This is a demo. Not a substitute for professional medical advice.
           </div>
         </div>

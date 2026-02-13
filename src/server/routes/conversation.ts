@@ -1,5 +1,5 @@
 import express from "express";
-import { createConversation } from "../db/queries/conversations";
+import { createConversation, getConversation } from "../db/queries/conversations";
 import {
   createMessage,
   getMessagesByConversation,
@@ -102,8 +102,9 @@ router.get("/conversation/:conversationId/findings", async (req, res) => {
 
 router.get("/conversation/:conversationId", async (req, res) => {
   const { conversationId } = req.params;
+  const conversation = await getConversation(conversationId);
   const messages = await getMessagesByConversation(conversationId);
-  res.json({ conversationId, messages });
+  res.json({ conversationId, createdAt: conversation?.created_at, messages });
 });
 
 export default router;

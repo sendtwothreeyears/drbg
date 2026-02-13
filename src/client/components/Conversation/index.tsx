@@ -14,7 +14,7 @@ import FindingsPanel, { FindingsPanelHandle } from "./FindingsPanel";
 
 // UTILITY IMPORTS
 import { startStream, ToolUseEvent } from "../../services/stream";
-import { getDisplayText } from "../../utils";
+import { getDisplayText, formatConsultDate } from "../../utils";
 
 const Conversation = () => {
   const { conversationId } = useParams();
@@ -23,6 +23,7 @@ const Conversation = () => {
   const [streaming, setStreaming] = useState(false);
   const [pendingTool, setPendingTool] = useState<ToolUseEvent | null>(null);
   const [showFindings, setShowFindings] = useState(false);
+  const [createdAt, setCreatedAt] = useState<string | null>(null);
   const textAreaRef = useRef<TextAreaHandle>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const findingsRef = useRef<FindingsPanelHandle>(null);
@@ -122,6 +123,7 @@ const Conversation = () => {
     const load = async () => {
       const { data } = await axios.get(`/api/conversation/${conversationId}`);
       setMessages(data.messages);
+      setCreatedAt(data.createdAt);
       textAreaRef.current?.focus();
 
       const lastMessage = data.messages[data.messages.length - 1];
@@ -179,12 +181,7 @@ const Conversation = () => {
                   </div>
                 </div>
                 <div className="font-fakt text-gray-500 text-md py-3">
-                  Consult started: Today,{" "}
-                  {new Date().toLocaleTimeString("en-US", {
-                    hour: "numeric",
-                    minute: "2-digit",
-                    hour12: true,
-                  })}
+                  {createdAt && formatConsultDate(createdAt)}
                 </div>
               </div>
               <button
