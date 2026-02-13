@@ -1,5 +1,8 @@
 import express from "express";
-import { createConversation, getConversation } from "../db/queries/conversations";
+import {
+  createConversation,
+  getConversation,
+} from "../db/queries/conversations";
 import {
   createMessage,
   getMessagesByConversation,
@@ -26,6 +29,7 @@ router.get("/conversation/:conversationId/stream", async (req, res) => {
   res.flushHeaders();
 
   let closed = false;
+  // when browser tab closed, or client's eventSource.close() called
   req.on("close", () => {
     closed = true;
   });
