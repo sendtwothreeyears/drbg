@@ -1,8 +1,8 @@
-import { createToolRequest } from "../anthropic";
+import { createToolRequest } from "./anthropic";
 import { recordClinicalFindingTool } from "../anthropicTools/record_clinical_finding";
 import {
-  createFindings,
-  getFindingsByConversation,
+  createFindingsMutation,
+  getFindingsByConversationQuery,
 } from "../db/queries/findings";
 import { buildPrompt } from "../utils";
 import prompts from "../prompts";
@@ -15,7 +15,8 @@ export async function extractFindings(
 ) {
   try {
     // fetch the current findings store
-    const existingFindings = await getFindingsByConversation(conversationId);
+    const existingFindings =
+      await getFindingsByConversationQuery(conversationId);
     // Take the existing findings, the clinical prompt for findings, format the findings for use in the new prompt to send to Anthropic
     const newPrompt = buildPrompt(
       existingFindings,
@@ -47,7 +48,7 @@ export async function extractFindings(
       };
 
       if (findings?.length > 0) {
-        await createFindings(conversationId, findings);
+        await createFindingsMutation(conversationId, findings);
       }
     }
   } catch (err) {

@@ -1,14 +1,11 @@
-import { createChatStream } from "../anthropic";
-import {
-  getMessagesByConversation,
-  createMessage,
-} from "../db/queries/messages";
+import { getMessagesByConversationQuery } from "../db/queries/messages";
+import { createMessageMutation } from "../db/queries/messages";
+import { ToolCall, Message, ContentBlock } from "../../types";
+import { tryParseJSON } from "../utils";
+import { extractFindings } from "./extractFindings";
 import tools from "../anthropicTools";
 import CLINICAL_INTERVIEW from "../prompts/CLINICAL_INTERVIEW";
-import { extractFindings } from "./extraction";
-
-import { ToolCall, Message } from "../../types";
-import { tryParseJSON } from "../utils";
+import { createChatStream } from "./anthropic";
 
 const systemPrompt = CLINICAL_INTERVIEW;
 
@@ -22,7 +19,8 @@ export async function runStream(
   toolName?: string,
 ) {
   // Fetches the messages ONCE before the stream starts
-  const dbMessages: Message[] = await getMessagesByConversation(conversationId);
+  const dbMessages: Message[] =
+    await getMessagesByConversationQuery(conversationId);
 
   // Maps the messages to be Anthropic API Friendly
   const messages = dbMessages
@@ -74,8 +72,7 @@ export async function runStream(
     // Stream completion after a tool has been selected.
     // these are for tools that were PASSED IN.
     if (toolCalls.length > 0) {
-      // ⚠️ DEFINE THIS
-      const contentBlocks: any[] = [];
+      const contentBlocks: ContentBlock[] = [];
       if (fullText) {
         contentBlocks.push({ type: "text", text: fullText });
       }
@@ -89,7 +86,11 @@ export async function runStream(
         });
       }
       // When stream is done, persist the FINAL Agent message into our database
-      await createMessage(conversationId, "assistant", JSON.stringify(contentBlocks));
+      await createMessageMutation(
+        conversationId,
+        "assistant",
+        JSON.stringify(contentBlocks),
+      );
 
       // Notify client of each tool call (which was passed in route setup)
       for (const tool of toolCalls) {
@@ -98,7 +99,7 @@ export async function runStream(
     }
     // If we have NO tool active
     else {
-      await createMessage(conversationId, "assistant", fullText);
+      await createMessageMutation(conversationId, "assistant", fullText);
     }
 
     // Extract clinical findings before signaling done
