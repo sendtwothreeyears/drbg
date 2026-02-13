@@ -21,11 +21,14 @@ router.get("/conversation/:conversationId/stream", async (req, res) => {
   // SSE - Stream initialization
   const { conversationId } = req.params;
 
-  // Prepares the headers in memory, not sent
+  // Tells the browser "this is an SSE stream, not a normal response"
   res.setHeader("Content-Type", "text/event-stream");
+  // Tells the browser "don't cache this, it's live data"
   res.setHeader("Cache-Control", "no-cache");
+  // Tells the browser "keep this connection open, more data is coming"
   res.setHeader("Connection", "keep-alive");
-  // Send them to client immediately to start the stream, and writes data later
+  // Flush =  Send them to client immediately to start the stream where EventSource is listening.
+  // We don't wait until data is available, we make sure the stream is active first and then actively write to it.
   res.flushHeaders();
 
   let closed = false;
