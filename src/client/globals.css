@@ -213,8 +213,60 @@ html {
   --font-ddn: "DDN", sans-serif;
   --font-fakt: "Fakt", sans-serif;
   --font-gt-super: "GT Super", serif;
+
+  /* Green Theme */
+  --color-main: #1d4034;
+  --color-placeholder: #616f6b;
+  --color-button: #16a368;
+  --color-button-hover: #1bc47a;
+  --color-selected: #e3f3ec;
+  --color-table-header: #e3ebe8;
+  --color-table-row: #f3f8f6;
+  --color-sidebar: #f3f8f6;
+  --color-search: #e3ebe8;
+  --color-outline: #e3ebe8;
+  --color-pane: #e3ebe8;
+  --color-sample: #fafdfc;
+  --color-label_background: #d7fbe3;
+  --color-label: #2fa554;
+  --color-bsolid: #bbcdc7;
+  --color-ring: #b1d9cb;
+
+  /* Light Theme */
   --color-highlight: #ffd800;
-  --color-body: #faf8f5;
+  --color-body: #f9f9f9;
+  --color-parchment: #fff;
+  --color-pause: #ebebeb;
+  --color-active: #fff;
+  --color-starter-border: #80848e;
+  --color-starter: #5c5d67;
+  --color-conv-hover: #36373c;
+  --color-conv-selected: #d7d9dd;
+  --color-sidebar-selected: #e9d9c9;
+  --color-sidebar-hover: #f2e4d6;
+  --color-starter-bg: #f9ebdd;
+  --color-starter-bg-hover: #e2f0e5;
+  --color-list-hover: #f7f0e8;
+  --color-user-message: #f8e5d3;
+  --color-user-message-green: #4db196;
+  --color-panel-border: #c9c2bb;
+  --color-create-message-light: #fffbf6;
+  --color-rec-loader: #e1d2c2;
+
+  /* Dark Theme */
+  --color-dark-sidebar: #2b2d31;
+  --color-dark-active: #313338;
+  --color-dark-starter-border: #80848e;
+  --color-dark-starter: #949ba4;
+  --color-dark-conv-hover: #36373c;
+  --color-dark-conv-selected: #404249;
+  --color-dark-starter-hover: #494c55;
+
+  /* Blue Theme */
+  --color-blue-main: #4267b2;
+  --color-blue-button: #447df7;
+  --color-blue-selected: #e5ebf8;
+  --color-blue-outline: #e7e7e7;
 }
 
 button {

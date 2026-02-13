@@ -1,24 +1,25 @@
-import db from "../";
+import pool from "../";
 import { randomUUID } from "crypto";
 
-const createProfile = (
+const createProfile = async (
   conversationId: string,
   age: number,
   biologicalSex: string,
-) => {
+): Promise<string> => {
   const id = randomUUID();
-  db.prepare(
-    "INSERT INTO user_profiles (profileid, conversationid, age, biological_sex) VALUES (?, ?, ?, ?)",
-  ).run(id, conversationId, age, biologicalSex);
+  await pool.query(
+    "INSERT INTO user_profiles (profileid, conversationid, age, biological_sex) VALUES ($1, $2, $3, $4)",
+    [id, conversationId, age, biologicalSex],
+  );
   return id;
 };
 
-const getProfileByConversation = (conversationId: string) => {
-  return db
-    .prepare(
-      "SELECT * FROM user_profiles WHERE conversationid = ? LIMIT 1",
-    )
-    .get(conversationId);
+const getProfileByConversation = async (conversationId: string) => {
+  const { rows } = await pool.query(
+    "SELECT * FROM user_profiles WHERE conversationid = $1 LIMIT 1",
+    [conversationId],
+  );
+  return rows[0];
 };
 
 export { createProfile, getProfileByConversation };

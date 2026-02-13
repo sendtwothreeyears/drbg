@@ -10,11 +10,16 @@ export const startStream = (
   onToolUse: (tool: ToolUseEvent) => void,
   onDone: () => void,
 ) => {
+  // Server sends raw text via res.write():  "data: {\"text\":\"hi\"}\n\n"
+  // EventSource receives that raw text stream
+  // Browser parses it: strips "data: " prefix and "\n\n"
+  // Browser creates a MessageEvent and appends the parsed data to event.data
+  // onmessage fires with that MessageEvent
   const eventSource = new EventSource(
     `/api/conversation/${conversationId}/stream`,
   );
 
-  eventSource.onmessage = (event) => {
+  eventSource.onmessage = (event: MessageEvent) => {
     console.log("data", event);
 
     const data = JSON.parse(event.data);

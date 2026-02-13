@@ -41,7 +41,7 @@ const GetStarted = ({ onStartConversation, loading }: GetStartedProps) => {
           <button
             onClick={() => onStartConversation(message)}
             disabled={!message.trim()}
-            className="bg-slate-800 py-2 px-4 rounded-sm text-white text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-main py-2 px-4 rounded-sm text-white text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Get Started
           </button>
@@ -69,20 +69,35 @@ const Home = () => {
 
   return (
     <div className="h-screen bg-body">
+      <div className="fixed top-6 left-6 z-10">
+        <a href="https://kasamd.com" target="_blank" rel="noopener noreferrer">
+          <img
+            src="/icons/themed/kasamd_green.png"
+            alt="KasaMD"
+            className="h-8"
+          />
+        </a>
+      </div>
       <div className="max-w-lg m-auto py-40 flex flex-col">
         <div className="mb-2">
-          <div className="font-ddn font-semibold text-4xl mb-2">
-            Hi, I'm{" "}
-            <span className="relative">
-              Dr. Bogan
-              <span className="absolute left-[5px] z-[-1] right-0 bottom-0 h-[5px] bg-highlight" />
-            </span>
+          <div className="flex items-center gap-3 mb-2">
+            <img
+              src="/icons/themed/logogreen_nobg.png"
+              alt="Boafo"
+              className="h-10"
+            />
+            <div className="font-ddn font-semibold text-4xl text-main mt-[5px]">
+              Hi, I'm{" "}
+              <span className="relative">
+                Boafo
+                <span className="absolute left-[5px] z-[-1] right-0 bottom-0 h-[5px] bg-highlight" />
+              </span>
+            </div>
           </div>
           <div className="font-fakt text-gray-600 font-medium text-xl pt-2">
-            <div className="py-2">Symptom assessment, guided by AI.</div>
             <div className="py-2">
-              Through a structured clinical interview, we'll help you understand
-              what your symptoms may indicate.
+              I'm here to help you understand your symptoms. I'll guide you
+              through a few questions.
             </div>
             <div className="py-2">What symptoms are you experiencing?</div>
           </div>
@@ -93,6 +108,9 @@ const Home = () => {
             onStartConversation={onStartConversation}
             loading={loading}
           />
+          <div className="font-fakt text-gray-400 text-sm text-center mt-2">
+            This is a demo. Not a substitute for professional medical advice.
+          </div>
         </div>
       </div>
     </div>

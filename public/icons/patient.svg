@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 704 704" width="400" height="400">
+  <!-- Head circle -->
+  <circle 
+    cx="352" 
+    cy="165" 
+    r="90" 
+    fill="none" 
+    stroke="#1d4034" 
+    stroke-width="45"
+  />
+  
+  <!-- Body/shoulders shape -->
+  <path 
+    d="M 185 350 
+       Q 185 280, 235 280
+       Q 290 280, 352 310
+       Q 414 280, 469 280
+       Q 519 280, 519 350
+       Q 519 450, 519 520
+       Q 519 545, 494 545
+       L 210 545
+       Q 185 545, 185 520
+       Q 185 450, 185 350 Z"
+    fill="none"
+    stroke="#1d4034"
+    stroke-width="45"
+  />
+</svg>

@@ -22,7 +22,7 @@ export async function runStream(
   toolName?: string,
 ) {
   // Fetches the messages ONCE before the stream starts
-  const dbMessages: Message[] = getMessagesByConversation(conversationId);
+  const dbMessages: Message[] = await getMessagesByConversation(conversationId);
 
   // Maps the messages to be Anthropic API Friendly
   const messages = dbMessages
@@ -46,6 +46,8 @@ export async function runStream(
   // defined ONCE before streaming
   let fullText = "";
   const toolCalls: ToolCall[] = [];
+
+  // ------
 
   // Start Streaming, gradually appending text to fullText, sending back to
   // client in chunks
@@ -87,7 +89,7 @@ export async function runStream(
         });
       }
       // When stream is done, persist the FINAL Agent message into our database
-      createMessage(conversationId, "assistant", JSON.stringify(contentBlocks));
+      await createMessage(conversationId, "assistant", JSON.stringify(contentBlocks));
 
       // Notify client of each tool call (which was passed in route setup)
       for (const tool of toolCalls) {
@@ -96,7 +98,7 @@ export async function runStream(
     }
     // If we have NO tool active
     else {
-      createMessage(conversationId, "assistant", fullText);
+      await createMessage(conversationId, "assistant", fullText);
     }
 
     // Extract clinical findings before signaling done

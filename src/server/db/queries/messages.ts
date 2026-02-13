@@ -1,34 +1,35 @@
-import db from "../";
+import pool from "../";
 import { randomUUID } from "crypto";
 
 import { Message } from "../../../types";
 
-const createMessage = (
+const createMessage = async (
   conversationId: string,
   role: "user" | "assistant",
   content: string,
-): string => {
+): Promise<string> => {
   const id = randomUUID();
-  db.prepare(
-    "INSERT INTO messages (messageid, conversationid, role, content) VALUES (?, ?, ?, ?)",
-  ).run(id, conversationId, role, content);
+  await pool.query(
+    "INSERT INTO messages (messageid, conversationid, role, content) VALUES ($1, $2, $3, $4)",
+    [id, conversationId, role, content],
+  );
   return id;
 };
 
-const getMessagesByConversation = (conversationId: string): Message[] => {
-  return db
-    .prepare(
-      "SELECT * FROM messages WHERE conversationid = ? ORDER BY created_at ASC",
-    )
-    .all(conversationId) as Message[];
+const getMessagesByConversation = async (conversationId: string): Promise<Message[]> => {
+  const { rows } = await pool.query(
+    "SELECT * FROM messages WHERE conversationid = $1 ORDER BY created_at ASC",
+    [conversationId],
+  );
+  return rows as Message[];
 };
 
-const getLastUserMessage = (conversationId: string): Message | undefined => {
-  return db
-    .prepare(
-      "SELECT * FROM messages WHERE conversationid = ? AND role = 'user' ORDER BY created_at DESC LIMIT 1",
-    )
-    .get(conversationId) as Message | undefined;
+const getLastUserMessage = async (conversationId: string): Promise<Message | undefined> => {
+  const { rows } = await pool.query(
+    "SELECT * FROM messages WHERE conversationid = $1 AND role = 'user' ORDER BY created_at DESC LIMIT 1",
+    [conversationId],
+  );
+  return rows[0] as Message | undefined;
 };
 
 export { createMessage, getMessagesByConversation, getLastUserMessage };

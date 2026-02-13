@@ -38,7 +38,7 @@ const DemographicsForm = ({ onSubmit, disabled }: DemographicsFormProps) => {
               className={`px-5 py-3 font-fakt text-base font-medium transition-colors ${
                 sex === "female"
                   ? "bg-white text-gray-900"
-                  : "text-gray-600 hover:bg-gray-200"
+                  : "text-gray-900 hover:bg-gray-200"
               }`}
             >
               Female
@@ -50,7 +50,7 @@ const DemographicsForm = ({ onSubmit, disabled }: DemographicsFormProps) => {
               className={`px-5 py-3 font-fakt text-base font-medium transition-colors ${
                 sex === "male"
                   ? "bg-white text-gray-900"
-                  : "text-gray-600 hover:bg-gray-200"
+                  : "text-gray-900 hover:bg-gray-200"
               }`}
             >
               Male
