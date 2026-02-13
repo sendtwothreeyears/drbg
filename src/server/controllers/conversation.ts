@@ -2,19 +2,19 @@ import { Request, Response } from "express";
 import {
   getMessagesByConversationQuery,
   createMessageMutation,
-} from "../db/queries/messages";
+} from "../db/operations/messages";
 
-import { getFindingsByConversationQuery } from "../db/queries/findings";
+import { getFindingsByConversationQuery } from "../db/operations/findings";
 
 import {
   createConversationMutation,
   getConversationQuery,
-} from "../db/queries/conversations";
+} from "../db/operations/conversations";
 
 import {
   createProfileMutation,
   getProfileByConversationQuery,
-} from "../db/queries/profiles";
+} from "../db/operations/profiles";
 
 import { runStream } from "../services/runStream";
 import { StreamEvent } from "../../types";

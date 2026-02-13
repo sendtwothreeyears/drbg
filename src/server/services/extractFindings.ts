@@ -3,7 +3,7 @@ import { recordClinicalFindingTool } from "../anthropicTools/record_clinical_fin
 import {
   createFindingsMutation,
   getFindingsByConversationQuery,
-} from "../db/queries/findings";
+} from "../db/operations/findings";
 import { buildPrompt } from "../utils";
 import prompts from "../prompts";
 

@@ -1,5 +1,5 @@
-import { getMessagesByConversationQuery } from "../db/queries/messages";
-import { createMessageMutation } from "../db/queries/messages";
+import { getMessagesByConversationQuery } from "../db/operations/messages";
+import { createMessageMutation } from "../db/operations/messages";
 import { ToolCall, Message, ContentBlock } from "../../types";
 import { tryParseJSON } from "../utils";
 import { extractFindings } from "./extractFindings";
