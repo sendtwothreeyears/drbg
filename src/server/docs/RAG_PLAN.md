@@ -164,6 +164,63 @@ Every chunk gets its section ancestry prepended as context. This is critical bec
 Example: A chunk from a nested subsection would be prefixed with:
 `Malaria > Treatment > Uncomplicated malaria in pregnancy`
 
+### Parsing & Chunking Script
+
+- `src/server/scripts/parse-who-guidelines.ts`
+- npm command: `npm run guidelines:parse`
+
+```bash
+npm run guidelines:parse
+```
+
+#### What it does
+
+Reads all 4,715 `.nxml` files from `data/who-guidelines/`, applies the hierarchical chunking strategy above, and outputs structured chunks to `data/who-guideline-chunks.json`.
+
+#### How it implements the strategy
+
+The script uses `fast-xml-parser` to parse each `.nxml` file into a traversable object, then walks the `<sec>` tree with a recursive `chunkSection` function that implements the three-tier splitting:
+
+1. **Section fits** (≤1,000 tokens) — becomes a single chunk, child section text included
+2. **Section too large + has child `<sec>` elements** — own text (paragraphs, boxes, lists outside child sections) becomes a separate chunk; each child section recurses through the same logic
+3. **Leaf section too large, no children** — falls back to paragraph-level grouping, where `<p>` elements and other content blocks are accumulated into chunks that stay under the token limit
+
+Token estimation uses a `chars / 4` heuristic, which is a reasonable approximation for English text with the `text-embedding-ada-002` tokenizer.
+
+#### File filtering
+
+Skips non-clinical content by filename pattern:
+- `fm-*` — front matter (preface, foreword, table of contents)
+- `rl-*` — reference lists
+- `ak-*` — acknowledgments
+
+Everything else is parsed: chapters (`ch-*`), annexes (`annex-*`), appendixes (`app-*`), glossaries, and web annexes.
+
+#### Metadata extraction
+
+From each `.nxml` file, the script extracts:
+- **Book title** from `<book-meta>` → `<book-title-group>` → `<book-title>`
+- **Chapter title** from `<book-part-meta>` → `<title-group>` → `<title>`
+- **Section titles** from each `<sec>` → `<title>`
+
+These form the title hierarchy prepended to every chunk.
+
+#### Output format
+
+`data/who-guideline-chunks.json` — an array of objects:
+
+```json
+{
+  "source": "who311664_NBK541170_ch2",
+  "section": "Guidelines on Physical Activity... > Recommendations > Physical Activity > Question",
+  "content": "Guidelines on Physical Activity... > Recommendations > Physical Activity > Question\n\nIn children under 5 years of age what dose..."
+}
+```
+
+- `source` — filename without `.nxml` extension, traces back to the specific archive and chapter
+- `section` — title hierarchy path, used as metadata in the `guideline_chunks` DB table
+- `content` — self-contained text with hierarchy prefix, ready for embedding
+
 ## Key Decisions
 - [x] Guideline sources — WHO (primary) + Ghana STGs (secondary)
 - [x] Guideline format — XML from NCBI Bookshelf Open Access subset
