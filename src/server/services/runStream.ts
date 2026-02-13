@@ -6,6 +6,7 @@ import { extractFindings } from "./extractFindings";
 import tools from "../anthropicTools";
 import CLINICAL_INTERVIEW from "../prompts/CLINICAL_INTERVIEW";
 import { createChatStream } from "./anthropic";
+import { createDiagnosesMutation } from "../db/operations/diagnoses";
 
 const systemPrompt = CLINICAL_INTERVIEW;
 
@@ -100,6 +101,18 @@ export async function runStream(
     // If we have NO tool active
     else {
       await createMessageMutation(conversationId, "assistant", fullText);
+    }
+
+    // Handle differential diagnoses — persist and kick off RAG search
+    const differentialsCall = toolCalls.find(
+      (t) => t.name === "generate_differentials",
+    );
+    if (differentialsCall) {
+      const { differentials } = differentialsCall.input as {
+        differentials: { condition: string; confidence: string }[];
+      };
+      await createDiagnosesMutation(conversationId, differentials);
+      // TODO: for each condition, call searchGuidelines(condition, findings)
     }
 
     // Extract clinical findings before signaling done

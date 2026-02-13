@@ -48,3 +48,12 @@ CREATE TABLE IF NOT EXISTS guideline_chunks (
 	embedding vector(1536),
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS differential_diagnoses (
+	diagnosisid TEXT PRIMARY KEY,
+	conversationid TEXT NOT NULL,
+	condition TEXT NOT NULL,
+	confidence TEXT NOT NULL CHECK(confidence IN ('high', 'moderate', 'low')),
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY(conversationid) REFERENCES conversations(conversationid)
+);
