@@ -9,16 +9,29 @@ Use clinical findings extracted during conversations to retrieve relevant clinic
 Guidelines → chunk → embed → store in vector DB
 
 ### At diagnosis
-Clinical findings → embed as query → search vector DB → retrieve relevant guideline chunks → feed to Claude → surface relevant guideline to user
+Interview → clinical findings → diagnosis (Claude's knowledge) → condition + clinical findings as query → search vector DB → retrieve relevant guideline chunks → feed to Claude → surface treatment recommendation
+
+RAG fires **after** Claude reaches a diagnosis, not during the interview. The guidelines don't help Claude figure out what's wrong — they help it recommend what to do about it based on WHO protocols.
+
+### Why the query is condition + clinical findings
+
+The query combines the diagnosed condition with the patient's clinical findings. Both are needed:
+
+- **Condition alone** ("malaria") retrieves all malaria guideline chunks — general treatment, severe treatment, prevention, pregnancy, children, drug resistance. Too broad.
+- **Condition + clinical findings** ("malaria + pregnant + first trimester + no drug allergies") retrieves the pregnancy-specific treatment subsection. The clinical findings act as a filter within the condition.
+
+This is why the chunking strategy uses hierarchical section-based splitting with title prefixes. Sections like `Malaria > Treatment > Uncomplicated malaria in pregnancy` have focused embeddings that match precisely when clinical findings include pregnancy context.
+
+The condition gets you to the right guideline. The clinical findings get you to the right *section* of that guideline. Without clinical findings, you have a search engine for WHO guidelines. With them, you have a system that returns the relevant WHO protocol for *this specific patient*.
 
 ### How the search works
 Text in, text out. Vectors are just the search engine in between.
 
-1. Clinical findings (text) are embedded into a vector at query time (not stored)
+1. The diagnosed condition + clinical findings (text) are combined into a query and embedded into a vector at query time (not stored)
 2. That query vector is compared against all stored `embedding` vectors in `guideline_chunks`
 3. Postgres returns the rows with the closest matching vectors
 4. The `content` (raw guideline text) is read from those rows
-5. That text is fed to Claude as context for the response
+5. That text is fed to Claude as context for the treatment recommendation
 
 Vectors are never surfaced to Claude or the user — they only exist to power the similarity search.
 
@@ -69,8 +82,9 @@ Both functions must use the same embedding model — if different models are use
 - Format as: "Here's a clinical guideline that might be relevant to this specific condition or concern"
 
 ### 6. Determine the diagnosis trigger
-- Define when RAG fires — tool call, findings threshold, or other mechanism
-- Only surface guidelines once AI has reached a diagnosis, not during the interview
+- RAG fires once Claude has reached a diagnosis — not during the interview
+- The query is the diagnosed condition + the patient's clinical findings combined as text
+- The condition targets the right guideline; the clinical findings target the right section within it
 
 ## Guideline Sources
 
@@ -223,6 +237,44 @@ These form the title hierarchy prepended to every chunk.
 - `section` — title hierarchy path, used as metadata in the `guideline_chunks` DB table
 - `content` — self-contained text with hierarchy prefix, ready for embedding
 
+### Embedding & Ingestion Script
+
+- `src/server/scripts/embed-who-guidelines.ts`
+- npm command: `npm run guidelines:embed`
+
+```bash
+npm run guidelines:embed
+```
+
+#### What it does
+
+Reads chunks from `data/who-guideline-chunks.json`, embeds each via OpenAI `text-embedding-ada-002`, and inserts into the `guideline_chunks` table. This is the bridge between the JSON checkpoint and the vector database.
+
+#### How it works
+
+1. Loads all chunks from the JSON file
+2. Truncates `guideline_chunks` table (idempotent — safe to re-run)
+3. Processes chunks in batches of 100 (OpenAI accepts multiple inputs per request)
+4. For each batch: calls `openai.embeddings.create()` to get 1536-dim vectors
+5. Inserts each chunk + embedding via `createGuidelineChunkMutation`
+6. Logs progress every batch, closes DB pool when done
+
+#### Cost and performance
+
+- ~369 API calls for 36,824 chunks (batches of 100)
+- Estimated cost: ~$2 (36,824 chunks × ~534 avg tokens = ~19.6M tokens at $0.10/1M)
+- 200ms delay between batches for rate limiting
+
+#### Pipeline summary
+
+The full one-time prep pipeline is three scripts run in sequence:
+
+```bash
+npm run guidelines:download   # .tar.gz → .nxml files
+npm run guidelines:parse       # .nxml → chunks JSON
+npm run guidelines:embed       # chunks JSON → embeddings → DB
+```
+
 #### Known limitations
 
 94% of chunks are under the 1,000 token target. The remaining 6% are oversized because they consist of a single large block (one massive table or one huge paragraph) that the paragraph-level fallback can't split further:
@@ -245,4 +297,4 @@ The oversized chunks are mostly GRADE evidence tables, systematic review summari
 - [x] Guideline format — XML from NCBI Bookshelf Open Access subset
 - [x] Embedding model — OpenAI `text-embedding-ada-002` (1536 dimensions)
 - [x] Chunking strategy — Hierarchical section-based using XML `<sec>` tree
-- [ ] Diagnosis trigger mechanism
+- [x] Diagnosis trigger mechanism — RAG fires post-diagnosis, query = condition + clinical findings

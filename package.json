@@ -10,7 +10,8 @@
     "db:setup": "tsx src/server/scripts/setup.ts",
     "db:reset": "tsx src/server/scripts/setup.ts --reset",
     "guidelines:download": "tsx src/server/scripts/download-who-guidelines.ts",
-    "guidelines:parse": "tsx src/server/scripts/parse-who-guidelines.ts"
+    "guidelines:parse": "tsx src/server/scripts/parse-who-guidelines.ts",
+    "guidelines:embed": "tsx src/server/scripts/embed-who-guidelines.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
@@ -20,6 +21,7 @@
     "dotenv": "^17.2.4",
     "express": "^5.1.0",
     "fast-xml-parser": "^5.3.5",
+    "openai": "^6.21.0",
     "pg": "^8.18.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
