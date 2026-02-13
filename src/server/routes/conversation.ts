@@ -10,6 +10,7 @@ import {
 } from "../db/queries/profiles";
 import { getFindingsByConversation } from "../db/queries/findings";
 import { runStream } from "../services/conversation";
+import type { StreamEvent } from "../../types";
 
 const router = express.Router();
 
@@ -29,7 +30,7 @@ router.get("/conversation/:conversationId/stream", async (req, res) => {
     closed = true;
   });
 
-  const send = (data: object) => {
+  const send = (data: StreamEvent) => {
     // each res.write() during stream writes back to the response body
     if (!closed) res.write(`data: ${JSON.stringify(data)}\n\n`);
   };
