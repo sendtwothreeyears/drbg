@@ -7,10 +7,6 @@ const createNewConversation = async (message: string) => {
   });
 };
 
-// const getAllConversations = async () => {
-//   return await axios.get("/api/conversations");
-// };
-
 const submitDemographics = async (
   conversationId: string,
   toolUseId: string,
@@ -24,7 +20,9 @@ const submitDemographics = async (
 };
 
 const getFindings = async (conversationId: string) => {
-  return await axios.get<{ findings: Finding[] }>(`/api/conversation/${conversationId}/findings`);
+  return await axios.get<{ findings: Finding[] }>(
+    `/api/conversation/${conversationId}/findings`,
+  );
 };
 
 export {
