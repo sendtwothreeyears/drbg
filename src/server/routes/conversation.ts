@@ -34,7 +34,7 @@ router.get("/conversation/:conversationId/stream", async (req, res) => {
     if (!closed) res.write(`data: ${JSON.stringify(data)}\n\n`);
   };
 
-  const profile = getProfileByConversation(conversationId);
+  const profile = await getProfileByConversation(conversationId);
   const toolName = profile ? undefined : "collect_demographics";
 
   await runStream(
@@ -57,30 +57,30 @@ router.get("/conversation/:conversationId/stream", async (req, res) => {
   );
 });
 
-router.post("/create", (req, res) => {
+router.post("/create", async (req, res) => {
   const { message } = req.body;
-  const conversationId = createConversation();
-  createMessage(
+  const conversationId = await createConversation();
+  await createMessage(
     conversationId,
     "assistant",
     "I'll help you work through your symptoms. Let's take a closer look.",
   );
-  createMessage(conversationId, "user", message);
+  await createMessage(conversationId, "user", message);
   res.json({ conversationId });
 });
 
-router.post("/conversation/:conversationId/message", (req, res) => {
+router.post("/conversation/:conversationId/message", async (req, res) => {
   const { conversationId } = req.params;
   const { message } = req.body;
-  createMessage(conversationId, "user", message);
+  await createMessage(conversationId, "user", message);
   res.json({ success: true });
 });
 
-router.post("/conversation/:conversationId/demographics", (req, res) => {
+router.post("/conversation/:conversationId/demographics", async (req, res) => {
   const { conversationId } = req.params;
   const { toolUseId, age, biologicalSex } = req.body;
 
-  createProfile(conversationId, age, biologicalSex);
+  await createProfile(conversationId, age, biologicalSex);
 
   const toolResultContent = JSON.stringify([
     {
@@ -89,20 +89,20 @@ router.post("/conversation/:conversationId/demographics", (req, res) => {
       content: `Patient demographics collected: Age ${age}, Sex ${biologicalSex}`,
     },
   ]);
-  createMessage(conversationId, "user", toolResultContent);
+  await createMessage(conversationId, "user", toolResultContent);
 
   res.json({ success: true });
 });
 
-router.get("/conversation/:conversationId/findings", (req, res) => {
+router.get("/conversation/:conversationId/findings", async (req, res) => {
   const { conversationId } = req.params;
-  const findings = getFindingsByConversation(conversationId);
+  const findings = await getFindingsByConversation(conversationId);
   res.json({ findings });
 });
 
-router.get("/conversation/:conversationId", (req, res) => {
+router.get("/conversation/:conversationId", async (req, res) => {
   const { conversationId } = req.params;
-  const messages = getMessagesByConversation(conversationId);
+  const messages = await getMessagesByConversation(conversationId);
   res.json({ conversationId, messages });
 });
 

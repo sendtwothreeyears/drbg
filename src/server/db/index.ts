@@ -1,9 +1,11 @@
-import Database from "better-sqlite3";
-import { dirname, join } from "path";
-import { fileURLToPath } from "url";
+import pg from "pg";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DB_PATH = join(__dirname, "cb.db");
-const db = new Database(DB_PATH);
+const pool = new pg.Pool({
+  host: "localhost",
+  port: 5432,
+  database: process.env.DATABASE ?? "cb",
+  user: process.env.PG_USER ?? "postgres",
+  password: process.env.PG_PASSWORD ?? "",
+});
 
-export default db;
+export default pool;

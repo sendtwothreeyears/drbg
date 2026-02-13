@@ -15,7 +15,7 @@ export async function extractFindings(
 ) {
   try {
     // fetch the current findings store
-    const existingFindings = getFindingsByConversation(conversationId);
+    const existingFindings = await getFindingsByConversation(conversationId);
     // Take the existing findings, the clinical prompt for findings, format the findings for use in the new prompt to send to Anthropic
     const newPrompt = buildPrompt(
       existingFindings,
@@ -47,7 +47,7 @@ export async function extractFindings(
       };
 
       if (findings?.length > 0) {
-        createFindings(conversationId, findings);
+        await createFindings(conversationId, findings);
       }
     }
   } catch (err) {

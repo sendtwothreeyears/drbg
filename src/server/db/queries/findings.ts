@@ -1,27 +1,24 @@
-import db from "../";
+import pool from "../";
 import { randomUUID } from "crypto";
 import type { Finding } from "../../../types";
 
-const createFindings = (conversationId: string, findings: Finding[]) => {
-  const insert = db.prepare(
-    "INSERT INTO clinical_findings (findingid, conversationid, category, value) VALUES (?, ?, ?, ?)",
+const createFindings = async (conversationId: string, findings: Finding[]): Promise<void> => {
+  await Promise.all(
+    findings.map((f) =>
+      pool.query(
+        "INSERT INTO clinical_findings (findingid, conversationid, category, value) VALUES ($1, $2, $3, $4)",
+        [randomUUID(), conversationId, f.category, f.value],
+      )
+    )
   );
-
-  const insertMany = db.transaction((items: Finding[]) => {
-    for (const f of items) {
-      insert.run(randomUUID(), conversationId, f.category, f.value);
-    }
-  });
-
-  insertMany(findings);
 };
 
-const getFindingsByConversation = (conversationId: string) => {
-  return db
-    .prepare(
-      "SELECT category, value FROM clinical_findings WHERE conversationid = ? ORDER BY created_at",
-    )
-    .all(conversationId) as Finding[];
+const getFindingsByConversation = async (conversationId: string): Promise<Finding[]> => {
+  const { rows } = await pool.query(
+    "SELECT category, value FROM clinical_findings WHERE conversationid = $1 ORDER BY created_at",
+    [conversationId],
+  );
+  return rows as Finding[];
 };
 
 export { createFindings, getFindingsByConversation };
