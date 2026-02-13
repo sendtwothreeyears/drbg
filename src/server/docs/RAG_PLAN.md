@@ -98,8 +98,75 @@ Both functions must use the same embedding model — if different models are use
 2. Expand to ~100-200 WHO guidelines covering common primary care conditions
 3. Add Ghana STGs for local treatment context
 
+## Guideline Download Pipeline
+
+### Source: NCBI Bookshelf (not PMC)
+WHO publishes their actual guideline documents to NCBI Bookshelf, not PubMed Central. PMC only has journal articles *about* WHO guidelines — not the guidelines themselves. Bookshelf hosts the full books and reports as structured XML.
+
+### How to access
+NCBI Bookshelf provides an FTP service for its Open Access subset:
+- **FTP base URL:** `ftp://ftp.ncbi.nlm.nih.gov/pub/litarch/`
+- **File list (CSV):** `ftp://ftp.ncbi.nlm.nih.gov/pub/litarch/file_list.csv`
+- Each entry in the CSV includes: book title, publisher, publication date, accession number, last update
+- Filter by publisher = "World Health Organization" to get only WHO documents
+- Each book is packaged as a `.tar.gz` containing `.nxml` (structured XML), PDFs, and images
+
+### Download steps
+1. Fetch `file_list.csv` from the FTP
+2. Parse CSV, filter for WHO-published entries
+3. Download each matching `.tar.gz` from the FTP path
+4. Extract `.nxml` files into `data/who-guidelines/`
+5. Rate limit downloads to respect NCBI servers
+
+### Script
+- `src/server/scripts/download-who-guidelines.ts`
+- npm command: `npm run guidelines:download`
+
+```bash
+npm run guidelines:download
+```
+
+## Chunking Strategy
+
+### Decision: Hierarchical section-based chunking
+
+Use the `.nxml` section tree (`<sec>` elements) to split guidelines into chunks, with a max token limit that triggers recursive splitting into subsections.
+
+### How it works
+
+1. Parse the XML section tree — each `<sec>` element is a candidate chunk
+2. If a section is under the max token limit → it becomes a chunk as-is
+3. If a section exceeds the limit → split into its child `<sec>` elements and repeat
+4. If a leaf section still exceeds the limit → fall back to paragraph-level splitting
+5. Prepend the title hierarchy to every chunk (e.g., "Malaria > Treatment > Uncomplicated malaria in adults") so each chunk is self-contained
+
+### Why hierarchical over pure section-based
+
+Pure section-based chunking uses each `<sec>` element directly as a chunk without considering size. This works well when sections are reasonably sized, but WHO guidelines often have large top-level sections that cover multiple patient populations or treatment scenarios in one block.
+
+A section titled "Treatment of malaria" might cover adults, children, and pregnant women in thousands of tokens. As a single chunk, the embedding becomes a diluted average of all three populations. When the clinical findings are "28-year-old pregnant woman with confirmed malaria", the retrieval needs to surface the pregnancy-specific treatment — not the entire treatment section where pregnancy is buried in the middle.
+
+Hierarchical chunking solves this by going one level deeper only when a section is too large. The subsections — "Treatment in adults", "Treatment in children", "Treatment in pregnancy" — become individual chunks with focused embeddings that match more precisely against specific clinical findings.
+
+For sections already at a reasonable size, hierarchical does nothing different from pure section-based. It only adds value at the edges where oversized sections would otherwise hurt retrieval precision.
+
+### Why not other strategies
+
+- **Fixed-size (token window):** Ignores document structure entirely. Can split a dosage table, contraindication list, or diagnostic criteria in half. Produces chunks that lack context and may be clinically incomplete.
+- **By paragraph:** Too granular. A paragraph saying "Administer 20mg orally once daily for 3 days" is meaningless without knowing which drug, which condition, which patient population. Loses the clinical context that sections preserve.
+- **By condition/topic:** Would require semantic understanding of content to group by medical condition. Harder to automate and the XML structure already provides this grouping implicitly through its section hierarchy.
+- **Semantic chunking:** Uses embeddings to detect topic shifts. Adds complexity, cost (extra API calls), and an external dependency for a problem the XML structure already solves.
+
+### Title hierarchy prefix
+
+Every chunk gets its section ancestry prepended as context. This is critical because it makes each chunk self-contained — when Claude retrieves a treatment chunk, it immediately knows which condition and patient population without needing adjacent chunks or metadata lookups.
+
+Example: A chunk from a nested subsection would be prefixed with:
+`Malaria > Treatment > Uncomplicated malaria in pregnancy`
+
 ## Key Decisions
 - [x] Guideline sources — WHO (primary) + Ghana STGs (secondary)
-- [ ] Chunking strategy
-- [ ] Embedding model
+- [x] Guideline format — XML from NCBI Bookshelf Open Access subset
+- [x] Embedding model — OpenAI `text-embedding-ada-002` (1536 dimensions)
+- [x] Chunking strategy — Hierarchical section-based using XML `<sec>` tree
 - [ ] Diagnosis trigger mechanism
