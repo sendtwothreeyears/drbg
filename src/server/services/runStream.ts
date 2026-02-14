@@ -7,7 +7,10 @@ import tools from "../anthropicTools";
 import CLINICAL_INTERVIEW from "../prompts/CLINICAL_INTERVIEW";
 import { createChatStream } from "./anthropic";
 import { createDiagnosesMutation } from "../db/operations/diagnoses";
-import { markConversationCompletedMutation } from "../db/operations/conversations";
+import { markConversationCompletedMutation, updateAssessmentMutation } from "../db/operations/conversations";
+import { searchGuidelines } from "./searchGuidelines";
+import { generateAssessment } from "./generateAssessment";
+import { getFindingsByConversationQuery } from "../db/operations/findings";
 
 const systemPrompt = CLINICAL_INTERVIEW;
 
@@ -120,8 +123,17 @@ export async function runStream(
       };
       await createDiagnosesMutation(conversationId, differentials);
       await markConversationCompletedMutation(conversationId);
+
+      const findings = await getFindingsByConversationQuery(conversationId);
+      const guidelineResults = await Promise.all(
+        differentials.map((d) => searchGuidelines(d.condition, findings)),
+      );
+
+      const { text, sources } = await generateAssessment(findings, differentials, guidelineResults);
+      await updateAssessmentMutation(conversationId, text, sources);
+
       meta.diagnoses = true;
-      // TODO: for each condition, call searchGuidelines(condition, findings)
+      meta.assessment = text;
     }
 
     // Extract clinical findings before signaling done

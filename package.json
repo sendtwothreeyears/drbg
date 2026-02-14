@@ -7,7 +7,7 @@
     "dev": "nodemon -w src/server -x tsx src/server/main.ts",
     "start": "NODE_ENV=production tsx src/server/main.ts",
     "build": "vite build",
-    "db:setup": "tsx src/server/scripts/setup.ts",
+    "db:setup": "tsx src/server/scripts/setup.ts && npm run guidelines:embed",
     "db:reset": "tsx src/server/scripts/setup.ts --reset",
     "guidelines:download": "tsx src/server/scripts/download-who-guidelines.ts",
     "guidelines:parse": "tsx src/server/scripts/parse-who-guidelines.ts",

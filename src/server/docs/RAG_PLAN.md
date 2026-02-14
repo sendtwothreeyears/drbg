@@ -56,6 +56,65 @@ Takes an embedding from the clinical findings and a limit (default 5 results). U
 
 Both functions must use the same embedding model — if different models are used, the vectors wouldn't be in the same "space" and the distance math would be meaningless.
 
+### How RAG works — Retrieve then Generate
+
+RAG is always two steps:
+
+1. **Retrieve** — search a knowledge base (the vector DB) for relevant context. This is `searchGuidelines` — it embeds the query, searches `guideline_chunks`, and returns the top-k matching chunks. The vector DB's job ends here.
+
+2. **Generate** — pass that retrieved context into an LLM prompt to produce a grounded response. This is `generateAssessment` — it takes the chunks as input alongside findings and diagnoses, and Claude generates the Assessment & Plan.
+
+The "augmented" in Retrieval-Augmented Generation means the prompt is augmented with retrieved documents. Step 2 is always a prompt — the LLM reads the retrieved text as context and generates from it. Without the retrieved chunks, Claude generates from general knowledge and may hallucinate dosages or miss protocols. With them, it generates grounded in specific WHO text that the vector DB surfaced.
+
+Every RAG system works this way — ChatGPT with file uploads, Perplexity searching the web, or a clinical tool searching guidelines. The vector DB finds the relevant context; the LLM consumes it.
+
+### What gets embedded at query time
+
+Only one vector is created per diagnosis at query time. The differential diagnoses and clinical findings are not embedded separately — they're combined into a single text string, embedded once, and compared against the stored guideline vectors.
+
+Example for one diagnosis:
+
+```
+"Concussion" + [symptom: headache, severity: 8/10, duration: 3 days]
+                    ↓
+        Combined into one text string:
+        "Concussion. symptom: headache. severity: 8/10. duration: 3 days"
+                    ↓
+        Embedded into ONE vector (via OpenAI)
+                    ↓
+        That vector is compared against all 36,824 stored guideline vectors
+                    ↓
+        Postgres returns the 5 closest matching chunks
+                    ↓
+        Those chunks are raw text — actual WHO guideline content
+```
+
+The query vector is ephemeral — it's not stored. It exists only to perform the similarity search. The result is guideline text, not vectors. If there are 3 differential diagnoses, this runs 3 times (in parallel), each producing its own set of matching chunks.
+
+Those retrieved chunks are then passed into the final Claude prompt as context — alongside the clinical findings and differential diagnoses. This is the "augmented" part of RAG. Claude reads the actual WHO guideline text and uses it to generate the Assessment & Plan, grounding its recommendations in specific protocols rather than general knowledge.
+
+### Why RAG instead of just Claude + chat history
+
+**Claude's training knowledge is frozen and general.** Claude knows about concussions in general. But it doesn't know the specific WHO 2024 imaging criteria thresholds, the exact dosage protocols for a given patient population, or the latest updated guidelines. The retrieved chunks give Claude current, specific protocol text it can reference directly — not a vague recollection from training data.
+
+**The chat history is a patient conversation, not clinical guidelines.** The chat history is "my head hurts", "it's an 8/10", "I fell 3 days ago." That's symptom collection. The guideline chunks are clinical protocols: "For suspected intracranial injury post-trauma, obtain CT head without contrast within 1 hour if GCS < 13..." — structured medical knowledge the patient never provided and Claude may not reproduce accurately from memory.
+
+**Without RAG:** You'd pass the entire chat history to Claude and say "generate an assessment." Claude reads the raw conversation ("my head hurts", "it's an 8/10", "I fell") and tries to piece together what's relevant, what the diagnoses should be, and what to recommend — all from its general training knowledge. The raw conversation is noisy, unstructured, and Claude has to do everything at once.
+
+**With RAG (what we built):** Claude never sees the chat history at the assessment step. Instead it receives three pre-processed inputs:
+- **Clinical findings** — structured, extracted data (not raw chat). Already distilled from the conversation by `extractFindings` after every message.
+- **Differential diagnoses** — already determined by a previous Claude call via `generate_differentials`. Claude doesn't need to figure out what's wrong — that's already done.
+- **Guideline chunks** — retrieved WHO protocol text, surfaced by the vector DB based on the specific diagnoses + findings for this patient.
+
+Each input is purpose-built. The messy conversation was consumed earlier in the pipeline and never reaches this step. Claude's only job in `generateAssessment` is to synthesize structured inputs + evidence-based guidelines into a coherent Assessment & Plan.
+
+**This also enables weaker/cheaper models.** Each step in the pipeline is a focused, simple task:
+- `extractFindings` — "extract structured data from this one message" (runs on Haiku)
+- `generate_differentials` — "given these findings, list possible conditions"
+- `generateAssessment` — "given these findings, diagnoses, and guidelines, write a plan"
+
+No model has to do everything at once. A weaker model can handle "synthesize these three structured inputs into a plan" much more reliably than "read this entire messy conversation, figure out what's wrong, recall the correct treatment protocols from memory, and write a plan." The pipeline does the hard work (extraction, retrieval, search) so the final generation step is straightforward.
+
 ## Steps
 
 ### 1. Parse and chunk guidelines
@@ -275,22 +334,17 @@ npm run guidelines:parse       # .nxml → chunks JSON
 npm run guidelines:embed       # chunks JSON → embeddings → DB
 ```
 
-#### Known limitations
+#### Sentence-level splitting fallback
 
-94% of chunks are under the 1,000 token target. The remaining 6% are oversized because they consist of a single large block (one massive table or one huge paragraph) that the paragraph-level fallback can't split further:
+The three-tier strategy (section → subsection → paragraph) handles most content, but some individual content blocks — GRADE evidence tables, systematic review summaries, large paragraphs — exceed the token limit as a single block that paragraph-level grouping can't break up further.
 
-| Range | Count |
-|-------|-------|
-| Under 1,000 | 34,702 (94%) |
-| 1,000–1,500 | 1,356 |
-| 1,500–2,000 | 348 |
-| 2,000–3,000 | 222 |
-| 3,000–5,000 | 135 |
-| 5,000+ | 61 |
+`groupBlocks` addresses this with a `splitBlock` function that acts as a final fallback:
 
-The oversized chunks are mostly GRADE evidence tables, systematic review summaries, and annexes — not core clinical treatment content. Embeddings for these will be more diluted but they're lower priority for retrieval.
+1. If a single block exceeds `MAX_CHUNK_TOKENS`, split it by sentences (on `. ` boundaries)
+2. Re-group sentences into sub-chunks that fit under the limit
+3. If a sentence itself still exceeds the limit (e.g., a massive table with no sentence breaks), hard-split by character count
 
-**TODO:** Add sentence-level splitting as a final fallback — when a single block exceeds the token limit, split by sentences and re-group. This would bring the remaining 6% under the target.
+This brings all chunks under the embedding model's 8,192-token limit. Max chunk size after parsing is ~1,175 tokens (slight overshoot from the `chars / 4` estimation heuristic). Total chunks increased from 36,824 to 39,052 as oversized blocks were split into additional chunks.
 
 ## Step 4: Query Flow Service
 
@@ -327,14 +381,28 @@ Two functions:
 - Calls `searchGuidelineChunksQuery(embedding, limit)` to search the vector DB
 - Returns top-k chunks with similarity scores
 
-### Assessment & Plan generation
+### Assessment & Plan generation (`src/server/services/generateAssessment.ts`)
 
-After retrieving guideline chunks for each diagnosis, the system feeds everything to Claude:
-- Clinical findings from `clinical_findings` table
-- Differential diagnoses from `differential_diagnoses` table
-- Retrieved guideline chunks (RAG context)
+A single function that makes one Claude API call with all three inputs:
 
-Claude generates an Assessment & Plan that is displayed in the AI Consult Summary — the final output of a completed consultation.
+**Inputs — each serves a specific role in the prompt:**
+- **Clinical findings** — what the patient presented with (symptoms, duration, severity, history). Tells Claude the clinical picture.
+- **Differential diagnoses** — the conditions to assess, ranked by confidence. Tells Claude what to address.
+- **Guideline chunks** — retrieved WHO protocol text relevant to each diagnosis for this patient. Grounds Claude's recommendations in evidence-based guidelines rather than general knowledge.
+
+**How it works:**
+1. Takes findings, diagnoses, and guideline chunks as parameters
+2. Builds a system prompt instructing Claude to generate an Assessment & Plan grounded in the provided guidelines
+3. Formats findings, diagnoses, and guideline text into a structured user message
+4. Calls `client.messages.create()` (non-streaming, single response)
+5. Returns the assessment text
+
+**Why all three matter:**
+- Without guidelines → Claude generates from general knowledge. May hallucinate dosages, miss locally relevant protocols, or give outdated recommendations.
+- Without findings → Claude can't tailor the plan to this patient. A malaria treatment for a pregnant woman is different from one for a child.
+- Without diagnoses → Claude doesn't know what conditions to address.
+
+The assessment text is persisted to the `assessment` column on the `conversations` table and displayed in the AI Consult Summary — the final output of a completed consultation.
 
 ## Key Decisions
 - [x] Guideline sources — WHO (primary) + Ghana STGs (secondary)

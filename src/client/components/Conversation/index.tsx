@@ -24,7 +24,9 @@ const Conversation = () => {
   const [streaming, setStreaming] = useState(false);
   const [pendingTool, setPendingTool] = useState<ToolUseEvent | null>(null);
   const [showFindings, setShowFindings] = useState(false);
+  const [showDiagnoses, setShowDiagnoses] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [assessment, setAssessment] = useState<string | null>(null);
   const [createdAt, setCreatedAt] = useState<string | null>(null);
   const textAreaRef = useRef<TextAreaHandle>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -62,6 +64,7 @@ const Conversation = () => {
         setStreaming(false);
         if (meta?.diagnoses) {
           setCompleted(true);
+          setAssessment(meta.assessment);
         } else {
           textAreaRef.current?.focus();
         }
@@ -132,6 +135,7 @@ const Conversation = () => {
       setCreatedAt(data.createdAt);
       if (data.completed) {
         setCompleted(true);
+        setAssessment(data.assessment);
       } else {
         textAreaRef.current?.focus();
       }
@@ -194,16 +198,30 @@ const Conversation = () => {
                   {createdAt && formatConsultDate(createdAt)}
                 </div>
               </div>
-              <button
-                onClick={() => setShowFindings((prev) => !prev)}
-                className={`font-fakt text-sm px-3 py-1.5 rounded-lg transition-colors self-start ${
-                  showFindings
-                    ? "bg-slate-800 text-white"
-                    : "bg-white text-gray-600 hover:bg-gray-100"
-                }`}
-              >
-                Findings
-              </button>
+              <div className="flex gap-2 self-start">
+                <button
+                  onClick={() => { setShowFindings((prev) => !prev); setShowDiagnoses(false); }}
+                  className={`font-fakt text-sm px-3 py-1.5 rounded-lg transition-colors ${
+                    showFindings
+                      ? "bg-slate-800 text-white"
+                      : "bg-white text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  Findings
+                </button>
+                {completed && (
+                  <button
+                    onClick={() => { setShowDiagnoses((prev) => !prev); setShowFindings(false); }}
+                    className={`font-fakt text-sm px-3 py-1.5 rounded-lg transition-colors ${
+                      showDiagnoses
+                        ? "bg-slate-800 text-white"
+                        : "bg-white text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    Diagnoses
+                  </button>
+                )}
+              </div>
             </div>
             <div className="font-fakt font-semibold text-main text-base my-8">
               If this is an emergency, call 911 or your local emergency number.
@@ -231,7 +249,12 @@ const Conversation = () => {
                 <p className="font-fakt text-gray-500 text-sm mb-4">
                   {createdAt && formatSummaryDate(createdAt)}
                 </p>
-                <DiagnosisPanel conversationId={conversationId!} />
+                {assessment && (
+                  <div className="mt-6">
+                    <h3 className="font-ddn font-semibold text-xl mb-2">Assessment & Plan</h3>
+                    <p className="font-fakt text-gray-700 whitespace-pre-wrap">{assessment}</p>
+                  </div>
+                )}
               </div>
             )}
             <div ref={bottomRef} />
@@ -273,10 +296,15 @@ const Conversation = () => {
         )}
       </div>
 
-      {/* Findings side panel */}
+      {/* Side panels */}
       {showFindings && (
         <div className="w-80 border-l border-gray-200 bg-body shrink-0 overflow-y-auto">
           <FindingsPanel ref={findingsRef} conversationId={conversationId!} />
+        </div>
+      )}
+      {showDiagnoses && (
+        <div className="w-80 border-l border-gray-200 bg-body shrink-0 overflow-y-auto">
+          <DiagnosisPanel conversationId={conversationId!} />
         </div>
       )}
     </div>

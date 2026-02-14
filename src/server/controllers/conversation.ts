@@ -150,7 +150,14 @@ class Conversations {
     const { conversationId } = req.params;
     const conversation = await getConversationQuery(conversationId);
     const messages = await getMessagesByConversationQuery(conversationId);
-    res.json({ conversationId, createdAt: conversation?.created_at, completed: conversation?.completed, messages });
+    res.json({
+      conversationId,
+      createdAt: conversation?.created_at,
+      completed: conversation?.completed,
+      assessment: conversation?.assessment,
+      assessmentSources: conversation?.assessment_sources,
+      messages,
+    });
   }
 }
 

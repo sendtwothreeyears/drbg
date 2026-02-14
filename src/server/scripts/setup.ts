@@ -10,7 +10,7 @@ const reset = process.argv.includes("--reset");
 async function setup() {
   if (reset) {
     await pool.query(
-      "DROP TABLE IF EXISTS clinical_findings, user_profiles, messages, conversations, users, guideline_chunks, differential_diagnoses CASCADE",
+      "DROP TABLE IF EXISTS clinical_findings, user_profiles, messages, conversations, users, differential_diagnoses CASCADE",
     );
     console.log("Database reset");
   }

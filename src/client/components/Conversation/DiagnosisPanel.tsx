@@ -1,9 +1,16 @@
 import { useState, useEffect } from "react";
 import { getDiagnoses } from "../../services/api";
+import axios from "axios";
 
 type Differential = {
   condition: string;
   confidence: string;
+};
+
+type Source = {
+  source: string;
+  section: string;
+  similarity: number;
 };
 
 const confidenceStyles: Record<string, string> = {
@@ -14,20 +21,25 @@ const confidenceStyles: Record<string, string> = {
 
 const DiagnosisPanel = ({ conversationId }: { conversationId: string }) => {
   const [diagnoses, setDiagnoses] = useState<Differential[]>([]);
+  const [sources, setSources] = useState<Source[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchDiagnoses = async () => {
+    const fetchData = async () => {
       try {
-        const { data } = await getDiagnoses(conversationId);
-        setDiagnoses(data.diagnoses);
+        const [diagRes, convRes] = await Promise.all([
+          getDiagnoses(conversationId),
+          axios.get(`/api/conversation/${conversationId}`),
+        ]);
+        setDiagnoses(diagRes.data.diagnoses);
+        setSources(convRes.data.assessmentSources || []);
       } catch (err) {
         console.error("Failed to load diagnoses", err);
       } finally {
         setLoading(false);
       }
     };
-    fetchDiagnoses();
+    fetchData();
   }, [conversationId]);
 
   if (loading) {
@@ -47,7 +59,7 @@ const DiagnosisPanel = ({ conversationId }: { conversationId: string }) => {
   }
 
   return (
-    <div className="overflow-y-auto h-full">
+    <div className="overflow-y-auto h-full p-6">
       <h2 className="font-ddn font-semibold text-xl mb-4">
         Differential Diagnoses
       </h2>
@@ -68,6 +80,22 @@ const DiagnosisPanel = ({ conversationId }: { conversationId: string }) => {
           </div>
         ))}
       </div>
+
+      {sources.length > 0 && (
+        <>
+          <h2 className="font-ddn font-semibold text-xl mt-8 mb-4">
+            Sources
+          </h2>
+          <div className="space-y-2">
+            {sources.map((s, i) => (
+              <div key={i} className="bg-white rounded-lg px-3 py-2">
+                <div className="font-fakt text-sm text-gray-700">{s.source}</div>
+                <div className="font-fakt text-xs text-gray-400">{s.section}</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 };

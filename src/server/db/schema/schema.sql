@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS conversations  (
 	conversationid TEXT PRIMARY KEY,
 	title TEXT,
 	completed BOOLEAN DEFAULT FALSE,
+	assessment TEXT,
+	assessment_sources JSON,
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	authorid TEXT,
 	FOREIGN KEY(authorid) REFERENCES users(userid)

@@ -47,6 +47,38 @@ function cleanText(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
+function splitBlock(text: string, maxTokens: number): string[] {
+  if (estimateTokens(text) <= maxTokens) return [text];
+
+  const sentences = text.split(/(?<=\.)\s+/);
+  const parts: string[] = [];
+  let current = "";
+
+  for (const sentence of sentences) {
+    if (current && estimateTokens(current + " " + sentence) > maxTokens) {
+      parts.push(current);
+      current = sentence;
+    } else {
+      current = current ? current + " " + sentence : sentence;
+    }
+  }
+  if (current) parts.push(current);
+
+  // If sentence splitting still leaves oversized parts, hard-split by characters
+  const result: string[] = [];
+  for (const part of parts) {
+    if (estimateTokens(part) <= maxTokens) {
+      result.push(part);
+    } else {
+      const charLimit = maxTokens * 4;
+      for (let i = 0; i < part.length; i += charLimit) {
+        result.push(part.slice(i, i + charLimit));
+      }
+    }
+  }
+  return result;
+}
+
 function getBookTitle(parsed: any): string {
   const wrapper = parsed["book-part-wrapper"];
   if (!wrapper?.["book-meta"]?.["book-title-group"]?.["book-title"]) return "";
@@ -109,18 +141,21 @@ function groupBlocks(
   let currentTokens = estimateTokens(sectionPath) + 2;
 
   for (const block of blocks) {
-    const blockTokens = estimateTokens(block);
-    if (currentTokens + blockTokens > MAX_CHUNK_TOKENS && current.length > 0) {
-      chunks.push({
-        source,
-        section: sectionPath,
-        content: `${sectionPath}\n\n${current.join("\n\n")}`,
-      });
-      current = [];
-      currentTokens = estimateTokens(sectionPath) + 2;
+    const subBlocks = splitBlock(block, MAX_CHUNK_TOKENS);
+    for (const sub of subBlocks) {
+      const subTokens = estimateTokens(sub);
+      if (currentTokens + subTokens > MAX_CHUNK_TOKENS && current.length > 0) {
+        chunks.push({
+          source,
+          section: sectionPath,
+          content: `${sectionPath}\n\n${current.join("\n\n")}`,
+        });
+        current = [];
+        currentTokens = estimateTokens(sectionPath) + 2;
+      }
+      current.push(sub);
+      currentTokens += subTokens;
     }
-    current.push(block);
-    currentTokens += blockTokens;
   }
 
   if (current.length > 0) {
