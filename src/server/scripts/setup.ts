@@ -4,13 +4,13 @@ import { readFileSync } from "fs";
 import pool from "../db";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const schema = readFileSync(join(__dirname, "schema/schema.sql"), "utf-8");
+const schema = readFileSync(join(__dirname, "../db/schema/schema.sql"), "utf-8");
 const reset = process.argv.includes("--reset");
 
 async function setup() {
   if (reset) {
     await pool.query(
-      "DROP TABLE IF EXISTS clinical_findings, user_profiles, messages, conversations, users CASCADE",
+      "DROP TABLE IF EXISTS clinical_findings, user_profiles, messages, conversations, users, differential_diagnoses CASCADE",
     );
     console.log("Database reset");
   }

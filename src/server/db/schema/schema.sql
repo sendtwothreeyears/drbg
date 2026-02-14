@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS vector;
+
 CREATE TABLE IF NOT EXISTS users (
 	userid TEXT PRIMARY KEY,
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -6,6 +8,9 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS conversations  (
 	conversationid TEXT PRIMARY KEY,
 	title TEXT,
+	completed BOOLEAN DEFAULT FALSE,
+	assessment TEXT,
+	assessment_sources JSON,
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	authorid TEXT,
 	FOREIGN KEY(authorid) REFERENCES users(userid)
@@ -34,6 +39,24 @@ CREATE TABLE IF NOT EXISTS clinical_findings (
 	conversationid TEXT NOT NULL,
 	category TEXT NOT NULL CHECK(category IN ('symptom', 'location', 'onset', 'duration', 'severity', 'character', 'aggravating_factor', 'relieving_factor', 'associated_symptom', 'medical_history', 'medication', 'allergy')),
 	value TEXT NOT NULL,
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY(conversationid) REFERENCES conversations(conversationid)
+);
+
+CREATE TABLE IF NOT EXISTS guideline_chunks (
+	chunkid TEXT PRIMARY KEY,
+	source TEXT NOT NULL,
+	section TEXT,
+	content TEXT NOT NULL,
+	embedding vector(1536),
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS differential_diagnoses (
+	diagnosisid TEXT PRIMARY KEY,
+	conversationid TEXT NOT NULL,
+	condition TEXT NOT NULL,
+	confidence TEXT NOT NULL CHECK(confidence IN ('high', 'moderate', 'low')),
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	FOREIGN KEY(conversationid) REFERENCES conversations(conversationid)
 );

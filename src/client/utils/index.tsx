@@ -29,4 +29,13 @@ const formatConsultDate = (timestamp: string): string => {
   return `Consult started: ${day}, ${time}`;
 };
 
-export { getDisplayText, formatConsultDate };
+const formatSummaryDate = (timestamp: string): string => {
+  const date = new Date(timestamp);
+  const month = date.toLocaleDateString("en-US", { month: "short" });
+  const day = date.getDate();
+  const year = date.getFullYear();
+  const time = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }).toLowerCase();
+  return `${month} ${day}, ${year}, ${time}`;
+};
+
+export { getDisplayText, formatConsultDate, formatSummaryDate };

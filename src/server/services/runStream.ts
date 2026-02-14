@@ -1,11 +1,16 @@
-import { getMessagesByConversationQuery } from "../db/queries/messages";
-import { createMessageMutation } from "../db/queries/messages";
+import { getMessagesByConversationQuery } from "../db/operations/messages";
+import { createMessageMutation } from "../db/operations/messages";
 import { ToolCall, Message, ContentBlock } from "../../types";
 import { tryParseJSON } from "../utils";
 import { extractFindings } from "./extractFindings";
 import tools from "../anthropicTools";
 import CLINICAL_INTERVIEW from "../prompts/CLINICAL_INTERVIEW";
 import { createChatStream } from "./anthropic";
+import { createDiagnosesMutation } from "../db/operations/diagnoses";
+import { markConversationCompletedMutation, updateAssessmentMutation } from "../db/operations/conversations";
+import { searchGuidelines } from "./searchGuidelines";
+import { generateAssessment } from "./generateAssessment";
+import { getFindingsByConversationQuery } from "../db/operations/findings";
 
 const systemPrompt = CLINICAL_INTERVIEW;
 
@@ -14,7 +19,7 @@ export async function runStream(
   conversationId: string,
   onText: (text: string) => void,
   onToolUse: (tool: ToolCall) => void,
-  onDone: () => void,
+  onDone: (meta?: Record<string, any>) => void,
   onError: (err: Error) => void,
   toolName?: string,
 ) {
@@ -44,6 +49,7 @@ export async function runStream(
   // defined ONCE before streaming
   let fullText = "";
   const toolCalls: ToolCall[] = [];
+  let differentialsCall: ToolCall | null = null;
 
   // ------
 
@@ -56,9 +62,14 @@ export async function runStream(
 
   // If Claude specifies we need to use a tool, pass it back to the user
   // This allows the client to show a pending tool (e.g. Demographics)
+  // Internal tools (generate_differentials) are captured separately
   stream.on("contentBlock", (block) => {
     if (block.type === "tool_use") {
-      toolCalls.push({ id: block.id, name: block.name, input: block.input });
+      if (block.name === "generate_differentials") {
+        differentialsCall = { id: block.id, name: block.name, input: block.input };
+      } else {
+        toolCalls.push({ id: block.id, name: block.name, input: block.input });
+      }
     }
   });
 
@@ -102,6 +113,29 @@ export async function runStream(
       await createMessageMutation(conversationId, "assistant", fullText);
     }
 
+    // Build metadata for the done event
+    const meta: Record<string, any> = {};
+
+    // Handle differential diagnoses — persist and kick off RAG search
+    if (differentialsCall) {
+      const { differentials } = differentialsCall.input as {
+        differentials: { condition: string; confidence: string }[];
+      };
+      await createDiagnosesMutation(conversationId, differentials);
+      await markConversationCompletedMutation(conversationId);
+
+      const findings = await getFindingsByConversationQuery(conversationId);
+      const guidelineResults = await Promise.all(
+        differentials.map((d) => searchGuidelines(d.condition, findings)),
+      );
+
+      const { text, sources } = await generateAssessment(findings, differentials, guidelineResults);
+      await updateAssessmentMutation(conversationId, text, sources);
+
+      meta.diagnoses = true;
+      meta.assessment = text;
+    }
+
     // Extract clinical findings before signaling done
     const lastUserMsg = dbMessages.findLast((m: Message) => m.role === "user");
     if (lastUserMsg) {
@@ -110,6 +144,6 @@ export async function runStream(
     }
     // send the message back to the user
     // -- this writes the final data within the res response back to client
-    onDone();
+    onDone(meta);
   });
 }

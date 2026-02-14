@@ -24,6 +24,10 @@ router.get("/conversation/:conversationId/findings", (req, res) => {
   conversationService.getFindingsByConversation(req, res);
 });
 
+router.get("/conversation/:conversationId/diagnoses", (req, res) => {
+  conversationService.getDiagnosesByConversation(req, res);
+});
+
 router.get("/conversation/:conversationId", (req, res) => {
   conversationService.getConversationAndMessages(req, res);
 });

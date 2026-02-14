@@ -1,0 +1,68 @@
+import "dotenv/config";
+import fs from "fs";
+import path from "path";
+import OpenAI from "openai";
+import pool from "../db";
+import { createGuidelineChunkMutation } from "../db/operations/guidelines";
+
+const INPUT_FILE = path.resolve("data/who-guideline-chunks.json");
+const BATCH_SIZE = 100;
+const DELAY_MS = 200;
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+interface Chunk {
+  source: string;
+  section: string;
+  content: string;
+}
+
+async function embedBatch(texts: string[]): Promise<number[][]> {
+  const res = await openai.embeddings.create({
+    model: "text-embedding-ada-002",
+    input: texts,
+  });
+  return res.data.map((d) => d.embedding);
+}
+
+async function main() {
+  const chunks: Chunk[] = JSON.parse(fs.readFileSync(INPUT_FILE, "utf-8"));
+  console.log(`Loaded ${chunks.length} chunks from ${INPUT_FILE}`);
+
+  // Clear existing data for idempotent re-runs
+  await pool.query("TRUNCATE guideline_chunks");
+  console.log("Cleared guideline_chunks table\n");
+
+  let inserted = 0;
+  const totalBatches = Math.ceil(chunks.length / BATCH_SIZE);
+
+  for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+    const batch = chunks.slice(i, i + BATCH_SIZE);
+    const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+
+    const embeddings = await embedBatch(batch.map((c) => c.content));
+
+    for (let j = 0; j < batch.length; j++) {
+      await createGuidelineChunkMutation(
+        batch[j].source,
+        batch[j].section,
+        batch[j].content,
+        embeddings[j],
+      );
+    }
+
+    inserted += batch.length;
+    console.log(
+      `[${batchNum}/${totalBatches}] Embedded and inserted ${batch.length} chunks (${inserted}/${chunks.length} total)`,
+    );
+
+    if (i + BATCH_SIZE < chunks.length) await sleep(DELAY_MS);
+  }
+
+  await pool.end();
+  console.log(`\nDone. ${inserted} chunks embedded and inserted.`);
+}
+
+main();

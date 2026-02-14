@@ -2,19 +2,21 @@ import { Request, Response } from "express";
 import {
   getMessagesByConversationQuery,
   createMessageMutation,
-} from "../db/queries/messages";
+} from "../db/operations/messages";
 
-import { getFindingsByConversationQuery } from "../db/queries/findings";
+import { getFindingsByConversationQuery } from "../db/operations/findings";
 
 import {
   createConversationMutation,
   getConversationQuery,
-} from "../db/queries/conversations";
+} from "../db/operations/conversations";
 
 import {
   createProfileMutation,
   getProfileByConversationQuery,
-} from "../db/queries/profiles";
+} from "../db/operations/profiles";
+
+import { getDiagnosesByConversationQuery } from "../db/operations/diagnoses";
 
 import { runStream } from "../services/runStream";
 import { StreamEvent } from "../../types";
@@ -51,7 +53,14 @@ class Conversations {
     };
 
     const profile = await getProfileByConversationQuery(conversationId);
-    const toolName = profile ? undefined : "collect_demographics";
+    const diagnoses = await getDiagnosesByConversationQuery(conversationId);
+
+    let toolName: string | undefined;
+    if (!profile) {
+      toolName = "collect_demographics";
+    } else if (diagnoses.length === 0) {
+      toolName = "generate_differentials";
+    }
 
     await runStream(
       conversationId,
@@ -59,9 +68,9 @@ class Conversations {
       (text) => send({ text }),
       // onTool -> sends chunked messages back to client, notifies if there is a tool
       (tool) => send({ tool }),
-      // onDone -> sends final message back to user, ends connection
-      () => {
-        send({ done: true });
+      // onDone -> signals stream completion with optional metadata, ends connection
+      (meta) => {
+        send({ done: true, ...meta });
         res.end();
       },
       // OnError
@@ -125,6 +134,15 @@ class Conversations {
     res.json({ findings });
   }
 
+  async getDiagnosesByConversation(
+    req: Request<{ conversationId: string }>,
+    res: Response,
+  ) {
+    const { conversationId } = req.params;
+    const diagnoses = await getDiagnosesByConversationQuery(conversationId);
+    res.json({ diagnoses });
+  }
+
   async getConversationAndMessages(
     req: Request<{ conversationId: string }>,
     res: Response,
@@ -132,7 +150,14 @@ class Conversations {
     const { conversationId } = req.params;
     const conversation = await getConversationQuery(conversationId);
     const messages = await getMessagesByConversationQuery(conversationId);
-    res.json({ conversationId, createdAt: conversation?.created_at, messages });
+    res.json({
+      conversationId,
+      createdAt: conversation?.created_at,
+      completed: conversation?.completed,
+      assessment: conversation?.assessment,
+      assessmentSources: conversation?.assessment_sources,
+      messages,
+    });
   }
 }
 
