@@ -292,6 +292,50 @@ The oversized chunks are mostly GRADE evidence tables, systematic review summari
 
 **TODO:** Add sentence-level splitting as a final fallback — when a single block exceeds the token limit, split by sentences and re-group. This would bring the remaining 6% under the target.
 
+## Step 4: Query Flow Service
+
+### How the conversation triggers RAG
+
+The `generate_differentials` tool is available to Claude during the clinical interview (stage 2, after demographics are collected). When Claude determines it has enough clinical findings, it calls the tool — but unlike `collect_demographics`, this tool never reaches the client. It's intercepted server-side in `runStream.ts`:
+
+1. `contentBlock` handler separates `generate_differentials` from client-facing tools
+2. `end` handler persists diagnoses to `differential_diagnoses` table
+3. Conversation is marked as `completed` in the `conversations` table
+4. `onDone` fires with `{ diagnoses: true }` metadata
+5. Client hides input area and shows the AI Consult Summary
+
+### Three-stage tool selection
+
+The controller checks conversation state before each stream and passes exactly one tool:
+
+- **Stage 1** (no profile) → `collect_demographics`
+- **Stage 2** (profile exists, no diagnoses) → `generate_differentials`
+- **Stage 3** (diagnoses exist) → no tools, conversation is complete
+
+### Query flow service (`src/server/services/searchGuidelines.ts`)
+
+Two functions:
+
+**`embedQuery(text: string): Promise<number[]>`**
+- Calls OpenAI `text-embedding-ada-002` to embed the query text
+- Returns a single 1536-dim vector (same model as ingestion — required for distance math to work)
+
+**`searchGuidelines(condition: string, findings: Finding[]): Promise<GuidelineChunk[]>`**
+- Formats query: combines condition + findings into a single text string
+  - e.g. `"Malaria. symptom: fever 3 days. location: rural Ghana. medical_history: pregnant first trimester."`
+- Calls `embedQuery()` to get the vector
+- Calls `searchGuidelineChunksQuery(embedding, limit)` to search the vector DB
+- Returns top-k chunks with similarity scores
+
+### Assessment & Plan generation
+
+After retrieving guideline chunks for each diagnosis, the system feeds everything to Claude:
+- Clinical findings from `clinical_findings` table
+- Differential diagnoses from `differential_diagnoses` table
+- Retrieved guideline chunks (RAG context)
+
+Claude generates an Assessment & Plan that is displayed in the AI Consult Summary — the final output of a completed consultation.
+
 ## Key Decisions
 - [x] Guideline sources — WHO (primary) + Ghana STGs (secondary)
 - [x] Guideline format — XML from NCBI Bookshelf Open Access subset
