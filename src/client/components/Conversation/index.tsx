@@ -10,6 +10,7 @@ import { submitDemographics } from "../../services/api";
 import TextArea, { TextAreaHandle } from "../../shared/TextArea";
 import TypingIndicator from "../../shared/TypingIndicator";
 import DemographicsForm from "./DemographicsForm";
+import DiagnosisList from "./DiagnosisList";
 import FindingsPanel, { FindingsPanelHandle } from "./FindingsPanel";
 
 // UTILITY IMPORTS
@@ -205,6 +206,9 @@ const Conversation = () => {
             )}
             {pendingTool?.name === "collect_demographics" && (
               <DemographicsForm onSubmit={handleDemographicsSubmit} />
+            )}
+            {pendingTool?.name === "generate_differentials" && (
+              <DiagnosisList differentials={pendingTool.input.differentials} />
             )}
             <div ref={bottomRef} />
           </div>

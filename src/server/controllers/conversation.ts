@@ -16,6 +16,8 @@ import {
   getProfileByConversationQuery,
 } from "../db/operations/profiles";
 
+import { getDiagnosesByConversationQuery } from "../db/operations/diagnoses";
+
 import { runStream } from "../services/runStream";
 import { StreamEvent } from "../../types";
 
@@ -51,7 +53,14 @@ class Conversations {
     };
 
     const profile = await getProfileByConversationQuery(conversationId);
-    const toolName = profile ? undefined : "collect_demographics";
+    const diagnoses = await getDiagnosesByConversationQuery(conversationId);
+
+    let toolName: string | undefined;
+    if (!profile) {
+      toolName = "collect_demographics";
+    } else if (diagnoses.length === 0) {
+      toolName = "generate_differentials";
+    }
 
     await runStream(
       conversationId,
