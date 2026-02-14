@@ -7,7 +7,7 @@ import { createGuidelineChunkMutation } from "../db/operations/guidelines";
 
 const INPUT_FILE = path.resolve("data/who-guideline-chunks.json");
 const BATCH_SIZE = 100;
-const DELAY_MS = 200;
+const DELAY_MS = 3500;
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
