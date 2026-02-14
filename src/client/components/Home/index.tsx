@@ -70,13 +70,13 @@ const Home = () => {
   return (
     <div className="h-screen bg-body">
       <div className="fixed top-6 left-6 z-10">
-        <a href="https://kasamd.com" target="_blank" rel="noopener noreferrer">
+        {/* <a href="https://kasamd.com" target="_blank" rel="noopener noreferrer">
           <img
             src="/icons/themed/kasamd_green.png"
             alt="KasaMD"
             className="h-8"
           />
-        </a>
+        </a> */}
       </div>
       <div className="max-w-lg m-auto py-40 flex flex-col">
         <div className="mb-2">

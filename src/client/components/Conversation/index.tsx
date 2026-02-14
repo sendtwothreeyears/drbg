@@ -18,7 +18,11 @@ import ReactMarkdown from "react-markdown";
 
 // UTILITY IMPORTS
 import { startStream, ToolUseEvent } from "../../services/stream";
-import { getDisplayText, formatConsultDate, formatSummaryDate } from "../../utils";
+import {
+  getDisplayText,
+  formatConsultDate,
+  formatSummaryDate,
+} from "../../utils";
 
 const Conversation = () => {
   const { conversationId } = useParams();
@@ -180,13 +184,13 @@ const Conversation = () => {
   return (
     <div className="h-screen bg-body flex overflow-hidden">
       <div className="fixed top-6 left-6 z-10">
-        <a href="https://kasamd.com" target="_blank" rel="noopener noreferrer">
+        {/* <a href="https://kasamd.com" target="_blank" rel="noopener noreferrer">
           <img
             src="/icons/themed/kasamd_green.png"
             alt="KasaMD"
             className="h-8"
           />
-        </a>
+        </a> */}
       </div>
       <div className="flex flex-col flex-1 min-w-0">
         {/* Messages area */}
@@ -211,7 +215,10 @@ const Conversation = () => {
               </div>
               <div className="flex gap-2 self-start">
                 <button
-                  onClick={() => { setShowFindings((prev) => !prev); setShowDiagnoses(false); }}
+                  onClick={() => {
+                    setShowFindings((prev) => !prev);
+                    setShowDiagnoses(false);
+                  }}
                   className={`font-fakt text-sm px-3 py-1.5 rounded-lg transition-colors ${
                     showFindings
                       ? "bg-slate-800 text-white"
@@ -222,7 +229,10 @@ const Conversation = () => {
                 </button>
                 {completed && (
                   <button
-                    onClick={() => { setShowDiagnoses((prev) => !prev); setShowFindings(false); }}
+                    onClick={() => {
+                      setShowDiagnoses((prev) => !prev);
+                      setShowFindings(false);
+                    }}
                     className={`font-fakt text-sm px-3 py-1.5 rounded-lg transition-colors ${
                       showDiagnoses
                         ? "bg-slate-800 text-white"
