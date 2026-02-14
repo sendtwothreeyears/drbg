@@ -12,6 +12,9 @@ import TypingIndicator from "../../shared/TypingIndicator";
 import DemographicsForm from "./DemographicsForm";
 import DiagnosisPanel from "./DiagnosisPanel";
 import FindingsPanel, { FindingsPanelHandle } from "./FindingsPanel";
+import LoadingPanel from "./LoadingPanel";
+import Accordion from "../../shared/Accordion";
+import ReactMarkdown from "react-markdown";
 
 // UTILITY IMPORTS
 import { startStream, ToolUseEvent } from "../../services/stream";
@@ -26,6 +29,7 @@ const Conversation = () => {
   const [showFindings, setShowFindings] = useState(false);
   const [showDiagnoses, setShowDiagnoses] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [assessmentLoading, setAssessmentLoading] = useState(false);
   const [assessment, setAssessment] = useState<string | null>(null);
   const [createdAt, setCreatedAt] = useState<string | null>(null);
   const textAreaRef = useRef<TextAreaHandle>(null);
@@ -59,9 +63,16 @@ const Conversation = () => {
         // reset streaming UI behavior
         setStreaming(false);
       },
+      // onAssessmentLoading
+      () => {
+        setCompleted(true);
+        setAssessmentLoading(true);
+        setStreaming(false);
+      },
       // onDone
       (meta) => {
         setStreaming(false);
+        setAssessmentLoading(false);
         if (meta?.diagnoses) {
           setCompleted(true);
           setAssessment(meta.assessment);
@@ -249,11 +260,18 @@ const Conversation = () => {
                 <p className="font-fakt text-gray-500 text-sm mb-4">
                   {createdAt && formatSummaryDate(createdAt)}
                 </p>
+                {assessmentLoading && !assessment && (
+                  <LoadingPanel
+                    title="Writing Your AI Consult Summary"
+                    subtitle="Reviewing the latest medical data..."
+                  />
+                )}
                 {assessment && (
-                  <div className="mt-6">
-                    <h3 className="font-ddn font-semibold text-xl mb-2">Assessment & Plan</h3>
-                    <p className="font-fakt text-gray-700 whitespace-pre-wrap">{assessment}</p>
-                  </div>
+                  <Accordion title="Assessment & Plan">
+                    <div className="assessment-markdown">
+                      <ReactMarkdown>{assessment}</ReactMarkdown>
+                    </div>
+                  </Accordion>
                 )}
               </div>
             )}

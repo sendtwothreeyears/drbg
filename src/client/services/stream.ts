@@ -8,6 +8,7 @@ export const startStream = (
   conversationId: string,
   onText: (text: string) => void,
   onToolUse: (tool: ToolUseEvent) => void,
+  onAssessmentLoading: () => void,
   onDone: (meta?: Record<string, any>) => void,
 ) => {
   // Server sends raw text via res.write():  "data: {\"text\":\"hi\"}\n\n"
@@ -31,6 +32,10 @@ export const startStream = (
     // If Claude returns a tool - stop the stream and use the tool
     else if (data.tool) {
       if (onToolUse) onToolUse(data.tool);
+    }
+    // Assessment generation has started
+    else if (data.assessmentLoading) {
+      onAssessmentLoading();
     }
     // Stream ends
     else if (data.done) {

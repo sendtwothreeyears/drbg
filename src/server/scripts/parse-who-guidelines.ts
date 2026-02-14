@@ -4,7 +4,8 @@ import { XMLParser } from "fast-xml-parser";
 
 const INPUT_DIR = path.resolve("data/who-guidelines");
 const OUTPUT_FILE = path.resolve("data/who-guideline-chunks.json");
-const MAX_CHUNK_TOKENS = 1000;
+const MAX_CHUNK_TOKENS = 400;
+const OVERLAP_TOKENS = 100;
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -139,19 +140,25 @@ function groupBlocks(
   const chunks: Chunk[] = [];
   let current: string[] = [];
   let currentTokens = estimateTokens(sectionPath) + 2;
+  let overlap = "";
 
   for (const block of blocks) {
     const subBlocks = splitBlock(block, MAX_CHUNK_TOKENS);
     for (const sub of subBlocks) {
       const subTokens = estimateTokens(sub);
       if (currentTokens + subTokens > MAX_CHUNK_TOKENS && current.length > 0) {
+        const content = current.join("\n\n");
         chunks.push({
           source,
           section: sectionPath,
-          content: `${sectionPath}\n\n${current.join("\n\n")}`,
+          content: `${sectionPath}\n\n${content}`,
         });
-        current = [];
-        currentTokens = estimateTokens(sectionPath) + 2;
+        // Carry trailing text as overlap into next chunk
+        const words = content.split(/\s+/);
+        const overlapWords = words.slice(-OVERLAP_TOKENS);
+        overlap = overlapWords.join(" ");
+        current = overlap ? [overlap] : [];
+        currentTokens = estimateTokens(sectionPath) + 2 + estimateTokens(overlap);
       }
       current.push(sub);
       currentTokens += subTokens;

@@ -19,6 +19,7 @@ export async function runStream(
   conversationId: string,
   onText: (text: string) => void,
   onToolUse: (tool: ToolCall) => void,
+  onAssessmentLoading: () => void,
   onDone: (meta?: Record<string, any>) => void,
   onError: (err: Error) => void,
   toolName?: string,
@@ -123,6 +124,8 @@ export async function runStream(
       };
       await createDiagnosesMutation(conversationId, differentials);
       await markConversationCompletedMutation(conversationId);
+
+      onAssessmentLoading();
 
       const findings = await getFindingsByConversationQuery(conversationId);
       const guidelineResults = await Promise.all(

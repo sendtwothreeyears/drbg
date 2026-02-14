@@ -21,7 +21,7 @@ interface Chunk {
 
 async function embedBatch(texts: string[]): Promise<number[][]> {
   const res = await openai.embeddings.create({
-    model: "text-embedding-ada-002",
+    model: "text-embedding-3-small",
     input: texts,
   });
   return res.data.map((d) => d.embedding);
