@@ -30,9 +30,17 @@ const getAllConversationsQuery = async (): Promise<Conversation[]> => {
   return rows as Conversation[];
 };
 
+const markConversationCompletedMutation = async (id: string): Promise<void> => {
+  await pool.query(
+    "UPDATE conversations SET completed = TRUE WHERE conversationid = $1",
+    [id],
+  );
+};
+
 export {
   createConversationMutation,
   getConversationQuery,
   updateConversationTitleMutation,
   getAllConversationsQuery,
+  markConversationCompletedMutation,
 };

@@ -25,9 +25,16 @@ const getFindings = async (conversationId: string) => {
   );
 };
 
+const getDiagnoses = async (conversationId: string) => {
+  return await axios.get(
+    `/api/conversation/${conversationId}/diagnoses`,
+  );
+};
+
 export {
   createNewConversation,
   // getAllConversations,
   submitDemographics,
   getFindings,
+  getDiagnoses,
 };

@@ -10,12 +10,12 @@ import { submitDemographics } from "../../services/api";
 import TextArea, { TextAreaHandle } from "../../shared/TextArea";
 import TypingIndicator from "../../shared/TypingIndicator";
 import DemographicsForm from "./DemographicsForm";
-import DiagnosisList from "./DiagnosisList";
+import DiagnosisPanel from "./DiagnosisPanel";
 import FindingsPanel, { FindingsPanelHandle } from "./FindingsPanel";
 
 // UTILITY IMPORTS
 import { startStream, ToolUseEvent } from "../../services/stream";
-import { getDisplayText, formatConsultDate } from "../../utils";
+import { getDisplayText, formatConsultDate, formatSummaryDate } from "../../utils";
 
 const Conversation = () => {
   const { conversationId } = useParams();
@@ -24,6 +24,7 @@ const Conversation = () => {
   const [streaming, setStreaming] = useState(false);
   const [pendingTool, setPendingTool] = useState<ToolUseEvent | null>(null);
   const [showFindings, setShowFindings] = useState(false);
+  const [completed, setCompleted] = useState(false);
   const [createdAt, setCreatedAt] = useState<string | null>(null);
   const textAreaRef = useRef<TextAreaHandle>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -57,9 +58,13 @@ const Conversation = () => {
         setStreaming(false);
       },
       // onDone
-      () => {
+      (meta) => {
         setStreaming(false);
-        textAreaRef.current?.focus();
+        if (meta?.diagnoses) {
+          setCompleted(true);
+        } else {
+          textAreaRef.current?.focus();
+        }
         findingsRef.current?.refresh();
       },
     );
@@ -125,7 +130,11 @@ const Conversation = () => {
       const { data } = await axios.get(`/api/conversation/${conversationId}`);
       setMessages(data.messages);
       setCreatedAt(data.createdAt);
-      textAreaRef.current?.focus();
+      if (data.completed) {
+        setCompleted(true);
+      } else {
+        textAreaRef.current?.focus();
+      }
 
       const lastMessage = data.messages[data.messages.length - 1];
       if (lastMessage?.role === "user") {
@@ -207,44 +216,61 @@ const Conversation = () => {
             {pendingTool?.name === "collect_demographics" && (
               <DemographicsForm onSubmit={handleDemographicsSubmit} />
             )}
-            {pendingTool?.name === "generate_differentials" && (
-              <DiagnosisList differentials={pendingTool.input.differentials} />
+            {completed && (
+              <div className="bg-gray-50 rounded-2xl p-8 mt-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <img
+                    src="/icons/themed/logogreen_nobg.png"
+                    alt="Boafo"
+                    className="h-8"
+                  />
+                </div>
+                <h2 className="font-ddn font-semibold text-3xl mb-1">
+                  AI Consult Summary
+                </h2>
+                <p className="font-fakt text-gray-500 text-sm mb-4">
+                  {createdAt && formatSummaryDate(createdAt)}
+                </p>
+                <DiagnosisPanel conversationId={conversationId!} />
+              </div>
             )}
             <div ref={bottomRef} />
           </div>
         </div>
 
         {/* Input area */}
-        <div className="shrink-0 bg-body pb-4 max-w-2xl w-full mx-auto">
-          <div className="bg-white p-2 rounded-lg shadow-sm border-gray-200">
-            <TextArea
-              ref={textAreaRef}
-              value={message}
-              onChange={setMessage}
-              onSubmit={handleSend}
-              placeholder="Type your message..."
-            />
-            <div className="flex justify-end">
-              <button
-                onClick={handleSend}
-                disabled={!message.trim() || streaming}
-                className={`p-2 rounded-full text-white ${message.trim() && !streaming ? "bg-main" : "bg-gray-300"}`}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  className="w-5 h-5"
+        {!completed && (
+          <div className="shrink-0 bg-body pb-4 max-w-2xl w-full mx-auto">
+            <div className="bg-white p-2 rounded-lg shadow-sm border-gray-200">
+              <TextArea
+                ref={textAreaRef}
+                value={message}
+                onChange={setMessage}
+                onSubmit={handleSend}
+                placeholder="Type your message..."
+              />
+              <div className="flex justify-end">
+                <button
+                  onClick={handleSend}
+                  disabled={!message.trim() || streaming}
+                  className={`p-2 rounded-full text-white ${message.trim() && !streaming ? "bg-main" : "bg-gray-300"}`}
                 >
-                  <path
-                    d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"
-                    transform="rotate(-90 12 12)"
-                  />
-                </svg>
-              </button>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    className="w-5 h-5"
+                  >
+                    <path
+                      d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"
+                      transform="rotate(-90 12 12)"
+                    />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Findings side panel */}

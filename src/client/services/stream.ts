@@ -8,7 +8,7 @@ export const startStream = (
   conversationId: string,
   onText: (text: string) => void,
   onToolUse: (tool: ToolUseEvent) => void,
-  onDone: () => void,
+  onDone: (meta?: Record<string, any>) => void,
 ) => {
   // Server sends raw text via res.write():  "data: {\"text\":\"hi\"}\n\n"
   // EventSource receives that raw text stream
@@ -35,7 +35,8 @@ export const startStream = (
     // Stream ends
     else if (data.done) {
       eventSource.close();
-      onDone();
+      const { done, ...meta } = data;
+      onDone(meta);
     } else if (data.error) {
       eventSource.close();
       onDone();

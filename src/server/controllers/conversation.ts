@@ -68,9 +68,9 @@ class Conversations {
       (text) => send({ text }),
       // onTool -> sends chunked messages back to client, notifies if there is a tool
       (tool) => send({ tool }),
-      // onDone -> sends final message back to user, ends connection
-      () => {
-        send({ done: true });
+      // onDone -> signals stream completion with optional metadata, ends connection
+      (meta) => {
+        send({ done: true, ...meta });
         res.end();
       },
       // OnError
@@ -134,6 +134,15 @@ class Conversations {
     res.json({ findings });
   }
 
+  async getDiagnosesByConversation(
+    req: Request<{ conversationId: string }>,
+    res: Response,
+  ) {
+    const { conversationId } = req.params;
+    const diagnoses = await getDiagnosesByConversationQuery(conversationId);
+    res.json({ diagnoses });
+  }
+
   async getConversationAndMessages(
     req: Request<{ conversationId: string }>,
     res: Response,
@@ -141,7 +150,7 @@ class Conversations {
     const { conversationId } = req.params;
     const conversation = await getConversationQuery(conversationId);
     const messages = await getMessagesByConversationQuery(conversationId);
-    res.json({ conversationId, createdAt: conversation?.created_at, messages });
+    res.json({ conversationId, createdAt: conversation?.created_at, completed: conversation?.completed, messages });
   }
 }
 
