@@ -7,7 +7,7 @@ import { createGuidelineChunkMutation } from "../db/operations/guidelines";
 
 const INPUT_FILE = path.resolve("data/who-guideline-chunks.json");
 const BATCH_SIZE = 100;
-const DELAY_MS = 200;
+const DELAY_MS = 3500;
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -21,7 +21,7 @@ interface Chunk {
 
 async function embedBatch(texts: string[]): Promise<number[][]> {
   const res = await openai.embeddings.create({
-    model: "text-embedding-ada-002",
+    model: "text-embedding-3-small",
     input: texts,
   });
   return res.data.map((d) => d.embedding);

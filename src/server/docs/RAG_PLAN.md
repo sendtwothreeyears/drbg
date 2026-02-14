@@ -70,26 +70,34 @@ Every RAG system works this way — ChatGPT with file uploads, Perplexity search
 
 ### What gets embedded at query time
 
-Only one vector is created per diagnosis at query time. The differential diagnoses and clinical findings are not embedded separately — they're combined into a single text string, embedded once, and compared against the stored guideline vectors.
+Two vectors are created per diagnosis at query time using a dual-query strategy:
+
+1. **Primary query** — the condition name alone (e.g. `"Concussion"`) for focused, high-similarity matches
+2. **Secondary query** — the condition + all clinical findings combined (e.g. `"Concussion. symptom: headache. severity: 8/10. duration: 3 days"`) for broader contextual matches
 
 Example for one diagnosis:
 
 ```
 "Concussion" + [symptom: headache, severity: 8/10, duration: 3 days]
                     ↓
-        Combined into one text string:
-        "Concussion. symptom: headache. severity: 8/10. duration: 3 days"
+        TWO queries:
+        Query 1: "Concussion" (condition only — focused)
+        Query 2: "Concussion. symptom: headache. severity: 8/10. duration: 3 days" (broad)
                     ↓
-        Embedded into ONE vector (via OpenAI)
+        Each embedded into a vector (via OpenAI text-embedding-3-small)
                     ↓
-        That vector is compared against all 36,824 stored guideline vectors
+        Each vector compared against all 83,247 stored guideline vectors
                     ↓
-        Postgres returns the 5 closest matching chunks
+        Results merged, deduped (highest similarity kept per chunk)
                     ↓
-        Those chunks are raw text — actual WHO guideline content
+        Re-ranked: +0.01 boost per patient finding keyword found in chunk
+                    ↓
+        Filtered: only chunks with similarity >= 0.50
+                    ↓
+        Top 5 chunks returned — raw WHO guideline text
 ```
 
-The query vector is ephemeral — it's not stored. It exists only to perform the similarity search. The result is guideline text, not vectors. If there are 3 differential diagnoses, this runs 3 times (in parallel), each producing its own set of matching chunks.
+The query vectors are ephemeral — they're not stored. They exist only to perform the similarity search. The result is guideline text, not vectors. If there are 3 differential diagnoses, this runs 3 times (in parallel), each producing its own set of matching chunks.
 
 Those retrieved chunks are then passed into the final Claude prompt as context — alongside the clinical findings and differential diagnoses. This is the "augmented" part of RAG. Claude reads the actual WHO guideline text and uses it to generate the Assessment & Plan, grounding its recommendations in specific protocols rather than general knowledge.
 
@@ -212,6 +220,7 @@ Use the `.nxml` section tree (`<sec>` elements) to split guidelines into chunks,
 3. If a section exceeds the limit → split into its child `<sec>` elements and repeat
 4. If a leaf section still exceeds the limit → fall back to paragraph-level splitting
 5. Prepend the title hierarchy to every chunk (e.g., "Malaria > Treatment > Uncomplicated malaria in adults") so each chunk is self-contained
+6. Apply ~100 token overlap at chunk boundaries to prevent context loss at split points
 
 ### Why hierarchical over pure section-based
 
@@ -256,11 +265,12 @@ This script does **not** touch the database. The JSON file is an intermediate ch
 
 The script uses `fast-xml-parser` to parse each `.nxml` file into a traversable object, then walks the `<sec>` tree with a recursive `chunkSection` function that implements the three-tier splitting:
 
-1. **Section fits** (≤1,000 tokens) — becomes a single chunk, child section text included
+1. **Section fits** (≤400 tokens) — becomes a single chunk, child section text included
 2. **Section too large + has child `<sec>` elements** — own text (paragraphs, boxes, lists outside child sections) becomes a separate chunk; each child section recurses through the same logic
 3. **Leaf section too large, no children** — falls back to paragraph-level grouping, where `<p>` elements and other content blocks are accumulated into chunks that stay under the token limit
+4. **Chunk overlap** — when splitting content across multiple chunks, the last ~100 tokens of each chunk are carried into the start of the next chunk, preventing context loss at split boundaries
 
-Token estimation uses a `chars / 4` heuristic, which is a reasonable approximation for English text with the `text-embedding-ada-002` tokenizer.
+Token estimation uses a `chars / 4` heuristic, which is a reasonable approximation for English text with the `text-embedding-3-small` tokenizer.
 
 #### File filtering
 
@@ -307,7 +317,7 @@ npm run guidelines:embed
 
 #### What it does
 
-Reads chunks from `data/who-guideline-chunks.json`, embeds each via OpenAI `text-embedding-ada-002`, and inserts into the `guideline_chunks` table. This is the bridge between the JSON checkpoint and the vector database.
+Reads chunks from `data/who-guideline-chunks.json`, embeds each via OpenAI `text-embedding-3-small`, and inserts into the `guideline_chunks` table. This is the bridge between the JSON checkpoint and the vector database.
 
 #### How it works
 
@@ -320,9 +330,9 @@ Reads chunks from `data/who-guideline-chunks.json`, embeds each via OpenAI `text
 
 #### Cost and performance
 
-- ~369 API calls for 36,824 chunks (batches of 100)
-- Estimated cost: ~$2 (36,824 chunks × ~534 avg tokens = ~19.6M tokens at $0.10/1M)
-- 200ms delay between batches for rate limiting
+- ~833 API calls for 83,247 chunks (batches of 100)
+- Estimated cost: ~$1.50 (83,247 chunks × ~367 avg tokens = ~30.5M tokens at $0.02/1M for `text-embedding-3-small`)
+- 3.5s delay between batches for rate limiting (~49 minutes total)
 
 #### Pipeline summary
 
@@ -344,7 +354,7 @@ The three-tier strategy (section → subsection → paragraph) handles most cont
 2. Re-group sentences into sub-chunks that fit under the limit
 3. If a sentence itself still exceeds the limit (e.g., a massive table with no sentence breaks), hard-split by character count
 
-This brings all chunks under the embedding model's 8,192-token limit. Max chunk size after parsing is ~1,175 tokens (slight overshoot from the `chars / 4` estimation heuristic). Total chunks increased from 36,824 to 39,052 as oversized blocks were split into additional chunks.
+This brings all chunks under the embedding model's 8,192-token limit. With 400-token max chunk size and ~100 token overlap, the total chunk count is 83,247 at ~367 avg tokens. Some outlier chunks reach ~2,406 tokens from single sections where child content is included under the limit check.
 
 ## Step 4: Query Flow Service
 
@@ -371,15 +381,21 @@ The controller checks conversation state before each stream and passes exactly o
 Two functions:
 
 **`embedQuery(text: string): Promise<number[]>`**
-- Calls OpenAI `text-embedding-ada-002` to embed the query text
+- Calls OpenAI `text-embedding-3-small` to embed the query text
 - Returns a single 1536-dim vector (same model as ingestion — required for distance math to work)
 
 **`searchGuidelines(condition: string, findings: Finding[]): Promise<GuidelineChunk[]>`**
-- Formats query: combines condition + findings into a single text string
-  - e.g. `"Malaria. symptom: fever 3 days. location: rural Ghana. medical_history: pregnant first trimester."`
-- Calls `embedQuery()` to get the vector
-- Calls `searchGuidelineChunksQuery(embedding, limit)` to search the vector DB
-- Returns top-k chunks with similarity scores
+
+Uses a dual-query strategy with re-ranking:
+
+1. **Primary query** — embeds the condition alone (e.g. `"Malaria"`) for focused matches against guideline chunks that directly address the condition
+2. **Secondary query** — embeds condition + all clinical findings (e.g. `"Malaria. symptom: fever 3 days. location: rural Ghana. medical_history: pregnant first trimester."`) for broader contextual matches
+3. **Deduplication** — merges results from both queries, keeping the highest similarity score per chunk
+4. **Re-ranking** — boosts similarity by 0.01 per clinical finding keyword found in the chunk content, nudging chunks that mention the patient's actual symptoms higher in results
+5. **Threshold filter** — only returns chunks with similarity >= 0.50 (`MIN_SIMILARITY`)
+6. **Returns** top-k chunks sorted by re-ranked similarity
+
+The dual-query approach solves the dilution problem: embedding `"Malaria"` alone scores higher against malaria guideline chunks than embedding `"Malaria. symptom: fever. duration: 3 days. location: chest..."` where the findings dilute the condition signal. The secondary query still captures broader context that the condition-only query might miss.
 
 ### Assessment & Plan generation (`src/server/services/generateAssessment.ts`)
 
@@ -407,6 +423,7 @@ The assessment text is persisted to the `assessment` column on the `conversation
 ## Key Decisions
 - [x] Guideline sources — WHO (primary) + Ghana STGs (secondary)
 - [x] Guideline format — XML from NCBI Bookshelf Open Access subset
-- [x] Embedding model — OpenAI `text-embedding-ada-002` (1536 dimensions)
-- [x] Chunking strategy — Hierarchical section-based using XML `<sec>` tree
+- [x] Embedding model — OpenAI `text-embedding-3-small` (1536 dimensions, upgraded from `text-embedding-ada-002`)
+- [x] Chunking strategy — Hierarchical section-based using XML `<sec>` tree, 400 token max, ~100 token overlap
+- [x] Search strategy — Dual query (condition-only + condition+findings), deduplication, keyword re-ranking, 0.50 similarity threshold
 - [x] Diagnosis trigger mechanism — RAG fires post-diagnosis, query = condition + clinical findings

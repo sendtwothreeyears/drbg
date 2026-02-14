@@ -68,6 +68,8 @@ class Conversations {
       (text) => send({ text }),
       // onTool -> sends chunked messages back to client, notifies if there is a tool
       (tool) => send({ tool }),
+      // onAssessmentLoading -> signals assessment generation has started
+      () => send({ assessmentLoading: true }),
       // onDone -> signals stream completion with optional metadata, ends connection
       (meta) => {
         send({ done: true, ...meta });

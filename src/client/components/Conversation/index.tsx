@@ -12,10 +12,17 @@ import TypingIndicator from "../../shared/TypingIndicator";
 import DemographicsForm from "./DemographicsForm";
 import DiagnosisPanel from "./DiagnosisPanel";
 import FindingsPanel, { FindingsPanelHandle } from "./FindingsPanel";
+import LoadingPanel from "./LoadingPanel";
+import Accordion from "../../shared/Accordion";
+import ReactMarkdown from "react-markdown";
 
 // UTILITY IMPORTS
 import { startStream, ToolUseEvent } from "../../services/stream";
-import { getDisplayText, formatConsultDate, formatSummaryDate } from "../../utils";
+import {
+  getDisplayText,
+  formatConsultDate,
+  formatSummaryDate,
+} from "../../utils";
 
 const Conversation = () => {
   const { conversationId } = useParams();
@@ -26,6 +33,7 @@ const Conversation = () => {
   const [showFindings, setShowFindings] = useState(false);
   const [showDiagnoses, setShowDiagnoses] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [assessmentLoading, setAssessmentLoading] = useState(false);
   const [assessment, setAssessment] = useState<string | null>(null);
   const [createdAt, setCreatedAt] = useState<string | null>(null);
   const textAreaRef = useRef<TextAreaHandle>(null);
@@ -59,9 +67,16 @@ const Conversation = () => {
         // reset streaming UI behavior
         setStreaming(false);
       },
+      // onAssessmentLoading
+      () => {
+        setCompleted(true);
+        setAssessmentLoading(true);
+        setStreaming(false);
+      },
       // onDone
       (meta) => {
         setStreaming(false);
+        setAssessmentLoading(false);
         if (meta?.diagnoses) {
           setCompleted(true);
           setAssessment(meta.assessment);
@@ -169,13 +184,13 @@ const Conversation = () => {
   return (
     <div className="h-screen bg-body flex overflow-hidden">
       <div className="fixed top-6 left-6 z-10">
-        <a href="https://kasamd.com" target="_blank" rel="noopener noreferrer">
+        {/* <a href="https://kasamd.com" target="_blank" rel="noopener noreferrer">
           <img
             src="/icons/themed/kasamd_green.png"
             alt="KasaMD"
             className="h-8"
           />
-        </a>
+        </a> */}
       </div>
       <div className="flex flex-col flex-1 min-w-0">
         {/* Messages area */}
@@ -200,7 +215,10 @@ const Conversation = () => {
               </div>
               <div className="flex gap-2 self-start">
                 <button
-                  onClick={() => { setShowFindings((prev) => !prev); setShowDiagnoses(false); }}
+                  onClick={() => {
+                    setShowFindings((prev) => !prev);
+                    setShowDiagnoses(false);
+                  }}
                   className={`font-fakt text-sm px-3 py-1.5 rounded-lg transition-colors ${
                     showFindings
                       ? "bg-slate-800 text-white"
@@ -211,7 +229,10 @@ const Conversation = () => {
                 </button>
                 {completed && (
                   <button
-                    onClick={() => { setShowDiagnoses((prev) => !prev); setShowFindings(false); }}
+                    onClick={() => {
+                      setShowDiagnoses((prev) => !prev);
+                      setShowFindings(false);
+                    }}
                     className={`font-fakt text-sm px-3 py-1.5 rounded-lg transition-colors ${
                       showDiagnoses
                         ? "bg-slate-800 text-white"
@@ -249,11 +270,18 @@ const Conversation = () => {
                 <p className="font-fakt text-gray-500 text-sm mb-4">
                   {createdAt && formatSummaryDate(createdAt)}
                 </p>
+                {assessmentLoading && !assessment && (
+                  <LoadingPanel
+                    title="Writing Your AI Consult Summary"
+                    subtitle="Reviewing the latest medical data..."
+                  />
+                )}
                 {assessment && (
-                  <div className="mt-6">
-                    <h3 className="font-ddn font-semibold text-xl mb-2">Assessment & Plan</h3>
-                    <p className="font-fakt text-gray-700 whitespace-pre-wrap">{assessment}</p>
-                  </div>
+                  <Accordion title="Assessment & Plan">
+                    <div className="assessment-markdown">
+                      <ReactMarkdown>{assessment}</ReactMarkdown>
+                    </div>
+                  </Accordion>
                 )}
               </div>
             )}
