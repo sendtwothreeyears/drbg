@@ -272,7 +272,7 @@ const Conversation = () => {
               <DemographicsForm onSubmit={handleDemographicsSubmit} />
             )}
             {completed && (
-              <div className="bg-gray-50 rounded-2xl p-8 mt-6 animate-summary-enter">
+              <div className="bg-white rounded-2xl p-8 mt-6 animate-summary-enter">
                 <div className="flex items-center gap-3 mb-2">
                   <img
                     src="/icons/themed/logogreen_nobg.png"

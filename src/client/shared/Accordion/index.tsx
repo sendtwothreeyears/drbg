@@ -14,10 +14,10 @@ const Accordion = ({ title, subtitle, defaultOpen = true, children }: AccordionP
     <div className="mt-6">
       <button
         onClick={() => setOpen((prev) => !prev)}
-        className="flex items-center justify-between w-full text-left"
+        className="flex items-center justify-between w-full text-left bg-emerald-50 rounded-lg px-4 py-3"
       >
         <div>
-          <h3 className="font-ddn font-semibold text-xl text-blue-main">
+          <h3 className="font-ddn font-semibold text-xl text-emerald-900">
             {title}
           </h3>
           {subtitle && (

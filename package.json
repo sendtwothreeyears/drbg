@@ -15,6 +15,7 @@
     "nice:download": "tsx src/server/scripts/nice/download.ts",
     "nice:parse": "tsx src/server/scripts/nice/parse.ts",
     "nice:embed": "tsx src/server/scripts/nice/embed.ts",
+    "ghana:download": "tsx src/server/scripts/ghana/download.ts",
     "embed:all": "npm run who:embed && npm run nice:embed"
   },
   "dependencies": {

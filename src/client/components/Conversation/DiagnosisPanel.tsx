@@ -15,9 +15,18 @@ type Source = {
   confidence?: string;
 };
 
-const getNcbiUrl = (source: string): string | null => {
-  const match = source.match(/NBK\d+/);
-  return match ? `https://www.ncbi.nlm.nih.gov/books/${match[0]}/` : null;
+const getSourceUrl = (source: string): string | null => {
+  const nbk = source.match(/NBK\d+/);
+  if (nbk) return `https://www.ncbi.nlm.nih.gov/books/${nbk[0]}/`;
+  const nice = source.match(/^(cg|ng)\d+/i);
+  if (nice) return `https://www.nice.org.uk/guidance/${nice[0]}`;
+  return null;
+};
+
+const getOrganization = (source: string): string => {
+  if (/^(cg|ng)\d+/i.test(source)) return "NICE";
+  if (/NBK\d+/.test(source)) return "WHO";
+  return "Unknown";
 };
 
 const getGuidelineTitle = (section: string): string => {
@@ -103,7 +112,7 @@ const DiagnosisPanel = ({ conversationId }: { conversationId: string }) => {
               <div key={i} className="flex items-center justify-between bg-white rounded-lg px-3 py-2">
                 <div>
                   <a
-                    href={getNcbiUrl(s.source) || "#"}
+                    href={getSourceUrl(s.source) || "#"}
                     target="_blank"
                     rel="noopener noreferrer"
                     title={s.section}
@@ -111,6 +120,9 @@ const DiagnosisPanel = ({ conversationId }: { conversationId: string }) => {
                   >
                     {getGuidelineTitle(s.section)}
                   </a>
+                  <span className="font-fakt text-xs text-gray-400 block mt-0.5">
+                    {getOrganization(s.source)}
+                  </span>
 
                   {s.condition && (
                     <div className={`font-fakt text-xs font-medium px-2 py-1 rounded-md mt-1 inline-block ${confidenceStyles[s.confidence || "low"]}`}>{s.condition}</div>
