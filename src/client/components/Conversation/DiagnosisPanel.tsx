@@ -15,14 +15,14 @@ type Source = {
   confidence?: string;
 };
 
-const getLastSection = (section: string): string => {
-  const parts = section.split(">");
-  return parts[parts.length - 1].trim();
-};
-
 const getNcbiUrl = (source: string): string | null => {
   const match = source.match(/NBK\d+/);
   return match ? `https://www.ncbi.nlm.nih.gov/books/${match[0]}/` : null;
+};
+
+const getGuidelineTitle = (section: string): string => {
+  const first = section.split(">")[0].trim();
+  return first.replace(/^Guideline:\s*/i, "");
 };
 
 const confidenceStyles: Record<string, string> = {
@@ -109,9 +109,9 @@ const DiagnosisPanel = ({ conversationId }: { conversationId: string }) => {
                     title={s.section}
                     className="font-fakt text-sm text-blue-700 underline hover:text-blue-900 line-clamp-2"
                   >
-                    {getLastSection(s.section)}
+                    {getGuidelineTitle(s.section)}
                   </a>
-                  <div className="font-fakt text-xs text-gray-400">{s.section.split(">")[0].trim()}</div>
+
                   {s.condition && (
                     <div className={`font-fakt text-xs font-medium px-2 py-1 rounded-md mt-1 inline-block ${confidenceStyles[s.confidence || "low"]}`}>{s.condition}</div>
                   )}
