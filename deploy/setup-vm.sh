@@ -9,7 +9,7 @@ BRANCH="main"
 
 # ── System packages ─────────────────────────────────────────────────
 sudo apt-get update
-sudo apt-get install -y curl git nginx
+sudo apt-get install -y curl git nginx postgresql-client
 
 # ── Node.js 20 ──────────────────────────────────────────────────────
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
@@ -30,16 +30,23 @@ sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
 sudo -u postgres psql -c "CREATE DATABASE cb;" || true
 sudo -u postgres psql -d cb -c "CREATE EXTENSION IF NOT EXISTS vector;"
 
+# ── PM2 ──────────────────────────────────────────────────────────────
+sudo npm install -g pm2
+
+# ── Log directory ────────────────────────────────────────────────────
+sudo mkdir -p /var/log/boafo
+
 # ── Clone repo ──────────────────────────────────────────────────────
 sudo rm -rf "$APP_DIR"
 sudo git clone --branch "$BRANCH" "$REPO_URL" "$APP_DIR"
 cd "$APP_DIR"
-sudo npm install
+sudo npm ci
 
 # ── Environment file ────────────────────────────────────────────────
 sudo mkdir -p "$ENV_DIR"
 if [ ! -f "$ENV_DIR/.env" ]; then
   sudo tee "$ENV_DIR/.env" > /dev/null <<'ENVFILE'
+NODE_ENV=production
 DATABASE=cb
 PG_USER=postgres
 PG_PASSWORD=postgres
@@ -61,11 +68,10 @@ set +a
 cd "$APP_DIR"
 sudo -E npm run db:setup
 
-# ── Systemd service ─────────────────────────────────────────────────
-sudo cp "$APP_DIR/deploy/boafo.service" /etc/systemd/system/boafo.service
-sudo systemctl daemon-reload
-sudo systemctl enable boafo
-sudo systemctl start boafo
+# ── PM2 process manager ─────────────────────────────────────────────
+pm2 start "$APP_DIR/deploy/ecosystem.config.cjs"
+pm2 startup systemd -u "$(whoami)" --hp "$HOME"
+pm2 save
 
 # ── Nginx ───────────────────────────────────────────────────────────
 sudo cp "$APP_DIR/deploy/nginx.conf" /etc/nginx/sites-available/boafo
