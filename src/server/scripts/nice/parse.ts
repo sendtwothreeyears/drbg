@@ -125,9 +125,15 @@ function parseFile(filePath: string): Chunk[] {
   let currentLevel = 1;
 
   // Walk through all elements that are headings or content
-  $("h2, h3, h4, h5, h6, p, ul, ol, table").each((_, el) => {
+  $("div.chapter").find("h2, h3, h4, h5, h6, p, ul, ol, table, caption").each((_, el) => {
     const $el = $(el);
     const tag = el.tagName.toLowerCase();
+
+    // Skip <p> inside <li> — already captured via ul/ol processing
+    if (tag === "p" && $el.closest("li").length > 0) return;
+    // Skip boilerplate panel text (generic NICE rights/consent blurb)
+    if (tag === "p" && $el.closest("div.panel").length > 0) return;
+
     const level = headingLevel(tag);
 
     if (level) {
@@ -172,6 +178,10 @@ function parseFile(filePath: string): Chunk[] {
           items.push("- " + cleanText($(li).text()));
         });
         text = items.join("\n");
+      } else if (tag === "caption") {
+        // Only capture standalone captions (outside <table>)
+        if ($el.closest("table").length > 0) return;
+        text = cleanText($el.text());
       } else {
         text = cleanText($el.text());
       }
@@ -225,10 +235,19 @@ function main() {
 
   const allChunks: Chunk[] = [];
   let failures = 0;
+  const emptyFiles: string[] = [];
 
   for (const file of files) {
     try {
       const chunks = parseFile(path.join(INPUT_DIR, file));
+      if (chunks.length === 0) {
+        // Check if this is a redirect page or genuinely missing content
+        const html = fs.readFileSync(path.join(INPUT_DIR, file), "utf-8");
+        const isRedirect = /updated and replaced by|This guidance has been replaced/i.test(html);
+        if (!isRedirect) {
+          emptyFiles.push(file);
+        }
+      }
       allChunks.push(...chunks);
     } catch (err) {
       failures++;
@@ -256,6 +275,13 @@ function main() {
   console.log(`  Max chunk size: ~${Math.max(...tokens)} tokens`);
   console.log(`  Min chunk size: ~${Math.min(...tokens)} tokens`);
   console.log(`  Output: ${OUTPUT_FILE}`);
+
+  if (emptyFiles.length > 0) {
+    console.log(`\n  WARNING: ${emptyFiles.length} non-redirect files produced 0 chunks:`);
+    for (const f of emptyFiles) {
+      console.log(`    - ${f}`);
+    }
+  }
 }
 
 main();
