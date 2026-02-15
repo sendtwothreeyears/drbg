@@ -2,8 +2,8 @@ import fs from "fs";
 import path from "path";
 import { XMLParser } from "fast-xml-parser";
 
-const INPUT_DIR = path.resolve("data/who-guidelines");
-const OUTPUT_FILE = path.resolve("data/who-guideline-chunks.json");
+const INPUT_DIR = path.resolve("data/who-guidelines/raw");
+const OUTPUT_FILE = path.resolve("data/who-guidelines/chunks.json");
 const MAX_CHUNK_TOKENS = 400;
 const OVERLAP_TOKENS = 100;
 

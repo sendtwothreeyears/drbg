@@ -5,7 +5,7 @@ import OpenAI from "openai";
 import pool from "../db";
 import { createGuidelineChunkMutation } from "../db/operations/guidelines";
 
-const INPUT_FILE = path.resolve("data/who-guideline-chunks.json");
+const INPUT_FILE = path.resolve("data/who-guidelines/chunks.json");
 const BATCH_SIZE = 100;
 const DELAY_MS = 3500;
 

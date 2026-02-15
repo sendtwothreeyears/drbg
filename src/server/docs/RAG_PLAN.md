@@ -196,7 +196,7 @@ NCBI Bookshelf provides an FTP service for its Open Access subset:
 1. Fetch `file_list.csv` from the FTP
 2. Parse CSV, filter for WHO-published entries
 3. Download each matching `.tar.gz` from the FTP path
-4. Extract `.nxml` files into `data/who-guidelines/`
+4. Extract `.nxml` files into `data/who-guidelines/raw/`
 5. Rate limit downloads to respect NCBI servers
 
 ### Script
@@ -257,7 +257,7 @@ npm run guidelines:parse
 
 #### What it does
 
-Reads all 4,715 `.nxml` files from `data/who-guidelines/`, applies the hierarchical chunking strategy above, and outputs structured chunks to `data/who-guideline-chunks.json`.
+Reads all 4,715 `.nxml` files from `data/who-guidelines/raw/`, applies the hierarchical chunking strategy above, and outputs structured chunks to `data/who-guidelines/chunks.json`.
 
 This script does **not** touch the database. The JSON file is an intermediate checkpoint between parsing and DB ingestion — it lets you inspect chunks, adjust parsing logic, and re-run without re-parsing thousands of XML files each time. The separate ingestion script (Step 3) reads this JSON, embeds each chunk via OpenAI, and inserts into the `guideline_chunks` table.
 
@@ -292,7 +292,7 @@ These form the title hierarchy prepended to every chunk.
 
 #### Output format
 
-`data/who-guideline-chunks.json` — an array of objects:
+`data/who-guidelines/chunks.json` — an array of objects:
 
 ```json
 {
@@ -317,7 +317,7 @@ npm run guidelines:embed
 
 #### What it does
 
-Reads chunks from `data/who-guideline-chunks.json`, embeds each via OpenAI `text-embedding-3-small`, and inserts into the `guideline_chunks` table. This is the bridge between the JSON checkpoint and the vector database.
+Reads chunks from `data/who-guidelines/chunks.json`, embeds each via OpenAI `text-embedding-3-small`, and inserts into the `guideline_chunks` table. This is the bridge between the JSON checkpoint and the vector database.
 
 #### How it works
 
