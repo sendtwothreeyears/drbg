@@ -2,8 +2,8 @@ import "dotenv/config";
 import fs from "fs";
 import path from "path";
 import OpenAI from "openai";
-import pool from "../db";
-import { createGuidelineChunkMutation } from "../db/operations/guidelines";
+import pool from "../../db";
+import { createGuidelineChunkMutation } from "../../db/operations/guidelines";
 
 const INPUT_FILE = path.resolve("data/who-guidelines/chunks.json");
 const BATCH_SIZE = 100;
