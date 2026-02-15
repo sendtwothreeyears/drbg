@@ -20,8 +20,8 @@ sudo apt-get install -y postgresql-15 postgresql-server-dev-15 build-essential
 cd /tmp
 git clone --branch v0.8.0 https://github.com/pgvector/pgvector.git
 cd pgvector
-make
-sudo make install
+make PG_CONFIG=/usr/lib/postgresql/15/bin/pg_config
+sudo make PG_CONFIG=/usr/lib/postgresql/15/bin/pg_config install
 cd /
 rm -rf /tmp/pgvector
 
