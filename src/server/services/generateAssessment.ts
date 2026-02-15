@@ -15,7 +15,7 @@ type GuidelineChunk = {
 
 type AssessmentResult = {
   text: string;
-  sources: { source: string; section: string; similarity: number }[];
+  sources: { source: string; section: string; similarity: number; condition: string; confidence: string }[];
 };
 
 const generateAssessment = async (
@@ -69,20 +69,28 @@ Base your recommendations on the provided guideline excerpts. Do not fabricate g
   // Deduplicate sources for storage
   const seen = new Set<string>();
   const sources: AssessmentResult["sources"] = [];
-  for (const chunks of guidelineResults) {
-    for (const chunk of chunks) {
+  for (let i = 0; i < guidelineResults.length; i++) {
+    for (const chunk of guidelineResults[i]) {
       if (!seen.has(chunk.chunkid)) {
         seen.add(chunk.chunkid);
         sources.push({
           source: chunk.source,
           section: chunk.section,
           similarity: chunk.similarity,
+          condition: diagnoses[i].condition,
+          confidence: diagnoses[i].confidence,
         });
       }
     }
   }
 
-  return { text, sources };
+  const confidenceRank: Record<string, number> = { high: 0, moderate: 1, low: 2 };
+  return {
+    text,
+    sources: sources.sort(
+      (a, b) => confidenceRank[a.confidence] - confidenceRank[b.confidence] || b.similarity - a.similarity
+    ),
+  };
 };
 
 export { generateAssessment };

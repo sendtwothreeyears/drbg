@@ -31,9 +31,20 @@ async function main() {
   const chunks: Chunk[] = JSON.parse(fs.readFileSync(INPUT_FILE, "utf-8"));
   console.log(`Loaded ${chunks.length} chunks from ${INPUT_FILE}`);
 
-  // Clear existing data for idempotent re-runs
-  await pool.query("TRUNCATE guideline_chunks");
-  console.log("Cleared guideline_chunks table\n");
+  // Skip if embeddings already exist (use --force to re-embed)
+  const force = process.argv.includes("--force");
+  const { rows } = await pool.query("SELECT COUNT(*) FROM guideline_chunks");
+  const existingCount = parseInt(rows[0].count, 10);
+  if (existingCount > 0 && !force) {
+    console.log(`guideline_chunks already has ${existingCount} rows — skipping. Use --force to re-embed.`);
+    await pool.end();
+    return;
+  }
+
+  if (existingCount > 0) {
+    await pool.query("TRUNCATE guideline_chunks");
+    console.log("Cleared guideline_chunks table\n");
+  }
 
   let inserted = 0;
   const totalBatches = Math.ceil(chunks.length / BATCH_SIZE);

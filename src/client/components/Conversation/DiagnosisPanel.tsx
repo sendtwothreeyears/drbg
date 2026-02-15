@@ -11,6 +11,18 @@ type Source = {
   source: string;
   section: string;
   similarity: number;
+  condition?: string;
+  confidence?: string;
+};
+
+const getLastSection = (section: string): string => {
+  const parts = section.split(">");
+  return parts[parts.length - 1].trim();
+};
+
+const getNcbiUrl = (source: string): string | null => {
+  const match = source.match(/NBK\d+/);
+  return match ? `https://www.ncbi.nlm.nih.gov/books/${match[0]}/` : null;
 };
 
 const confidenceStyles: Record<string, string> = {
@@ -90,8 +102,19 @@ const DiagnosisPanel = ({ conversationId }: { conversationId: string }) => {
             {sources.map((s, i) => (
               <div key={i} className="flex items-center justify-between bg-white rounded-lg px-3 py-2">
                 <div>
-                  <div className="font-fakt text-sm text-gray-700">{s.source}</div>
-                  <div className="font-fakt text-xs text-gray-400">{s.section}</div>
+                  <a
+                    href={getNcbiUrl(s.source) || "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={s.section}
+                    className="font-fakt text-sm text-blue-700 underline hover:text-blue-900 line-clamp-2"
+                  >
+                    {getLastSection(s.section)}
+                  </a>
+                  <div className="font-fakt text-xs text-gray-400">{s.section.split(">")[0].trim()}</div>
+                  {s.condition && (
+                    <div className={`font-fakt text-xs font-medium px-2 py-1 rounded-md mt-1 inline-block ${confidenceStyles[s.confidence || "low"]}`}>{s.condition}</div>
+                  )}
                 </div>
                 <span className="ml-2 px-2 py-1 rounded-md font-fakt text-xs font-medium bg-blue-100 text-blue-700">
                   {Math.round(s.similarity * 100)}%
