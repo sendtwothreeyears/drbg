@@ -11,6 +11,27 @@ type Source = {
   source: string;
   section: string;
   similarity: number;
+  condition?: string;
+  confidence?: string;
+};
+
+const getSourceUrl = (source: string): string | null => {
+  const nbk = source.match(/NBK\d+/);
+  if (nbk) return `https://www.ncbi.nlm.nih.gov/books/${nbk[0]}/`;
+  const nice = source.match(/^(cg|ng)\d+/i);
+  if (nice) return `https://www.nice.org.uk/guidance/${nice[0]}`;
+  return null;
+};
+
+const getOrganization = (source: string): string => {
+  if (/^(cg|ng)\d+/i.test(source)) return "NICE";
+  if (/NBK\d+/.test(source)) return "WHO";
+  return "Unknown";
+};
+
+const getGuidelineTitle = (section: string): string => {
+  const first = section.split(">")[0].trim();
+  return first.replace(/^Guideline:\s*/i, "");
 };
 
 const confidenceStyles: Record<string, string> = {
@@ -90,8 +111,22 @@ const DiagnosisPanel = ({ conversationId }: { conversationId: string }) => {
             {sources.map((s, i) => (
               <div key={i} className="flex items-center justify-between bg-white rounded-lg px-3 py-2">
                 <div>
-                  <div className="font-fakt text-sm text-gray-700">{s.source}</div>
-                  <div className="font-fakt text-xs text-gray-400">{s.section}</div>
+                  <a
+                    href={getSourceUrl(s.source) || "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={s.section}
+                    className="font-fakt text-sm text-blue-700 underline hover:text-blue-900 line-clamp-2"
+                  >
+                    {getGuidelineTitle(s.section)}
+                  </a>
+                  <span className="font-fakt text-xs text-gray-400 block mt-0.5">
+                    {getOrganization(s.source)}
+                  </span>
+
+                  {s.condition && (
+                    <div className={`font-fakt text-xs font-medium px-2 py-1 rounded-md mt-1 inline-block ${confidenceStyles[s.confidence || "low"]}`}>{s.condition}</div>
+                  )}
                 </div>
                 <span className="ml-2 px-2 py-1 rounded-md font-fakt text-xs font-medium bg-blue-100 text-blue-700">
                   {Math.round(s.similarity * 100)}%

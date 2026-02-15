@@ -80,6 +80,7 @@ const Conversation = () => {
         if (meta?.diagnoses) {
           setCompleted(true);
           setAssessment(meta.assessment);
+          setShowDiagnoses(true);
         } else {
           textAreaRef.current?.focus();
         }
@@ -151,6 +152,7 @@ const Conversation = () => {
       if (data.completed) {
         setCompleted(true);
         setAssessment(data.assessment);
+        setShowDiagnoses(true);
       } else {
         textAreaRef.current?.focus();
       }
@@ -213,35 +215,49 @@ const Conversation = () => {
                   {createdAt && formatConsultDate(createdAt)}
                 </div>
               </div>
-              <div className="flex gap-2 self-start">
-                <button
-                  onClick={() => {
-                    setShowFindings((prev) => !prev);
-                    setShowDiagnoses(false);
-                  }}
-                  className={`font-fakt text-sm px-3 py-1.5 rounded-lg transition-colors ${
-                    showFindings
-                      ? "bg-slate-800 text-white"
-                      : "bg-white text-gray-600 hover:bg-gray-100"
-                  }`}
-                >
-                  Findings
-                </button>
-                {completed && (
+              <div className="flex gap-4 self-start items-center">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <span className="font-fakt text-sm text-gray-600">Findings</span>
                   <button
                     onClick={() => {
+                      setShowFindings((prev) => !prev);
+                      setShowDiagnoses(false);
+                    }}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${
+                      showFindings ? "bg-slate-800" : "bg-gray-300"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                        showFindings ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </label>
+                <label className={`flex items-center gap-2 ${completed ? "cursor-pointer" : "cursor-not-allowed"}`}>
+                  <span className={`font-fakt text-sm ${completed ? "text-gray-600" : "text-gray-300"}`}>Diagnoses</span>
+                  <button
+                    onClick={() => {
+                      if (!completed) return;
                       setShowDiagnoses((prev) => !prev);
                       setShowFindings(false);
                     }}
-                    className={`font-fakt text-sm px-3 py-1.5 rounded-lg transition-colors ${
-                      showDiagnoses
-                        ? "bg-slate-800 text-white"
-                        : "bg-white text-gray-600 hover:bg-gray-100"
+                    disabled={!completed}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${
+                      !completed
+                        ? "bg-gray-200 cursor-not-allowed"
+                        : showDiagnoses
+                          ? "bg-slate-800"
+                          : "bg-gray-300"
                     }`}
                   >
-                    Diagnoses
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                        showDiagnoses ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    />
                   </button>
-                )}
+                </label>
               </div>
             </div>
             <div className="font-fakt font-semibold text-main text-base my-8">
@@ -256,7 +272,7 @@ const Conversation = () => {
               <DemographicsForm onSubmit={handleDemographicsSubmit} />
             )}
             {completed && (
-              <div className="bg-gray-50 rounded-2xl p-8 mt-6">
+              <div className="bg-white rounded-2xl p-8 mt-6 animate-summary-enter">
                 <div className="flex items-center gap-3 mb-2">
                   <img
                     src="/icons/themed/logogreen_nobg.png"

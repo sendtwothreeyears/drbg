@@ -1,0 +1,14 @@
+[Unit]
+Description=Boafo Node.js App
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/boafo
+EnvironmentFile=/etc/boafo/.env
+ExecStart=/usr/bin/node --import tsx src/server/main.ts
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

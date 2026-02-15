@@ -5,8 +5,8 @@ import { execSync } from "child_process";
 const FILE_LIST_URL =
   "https://ftp.ncbi.nlm.nih.gov/pub/litarch/file_list.csv";
 const FTP_BASE = "https://ftp.ncbi.nlm.nih.gov/pub/litarch/";
-const OUTPUT_DIR = path.resolve("data/who-guidelines");
-const TEMP_DIR = path.resolve("data/who-guidelines/.tmp");
+const OUTPUT_DIR = path.resolve("data/who-guidelines/raw");
+const TEMP_DIR = path.resolve("data/who-guidelines/raw/.tmp");
 const DELAY_MS = 500;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
