@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ── Config ──────────────────────────────────────────────────────────
-REPO_URL="https://github.com/sendtwothreeyears/boafo.git"
+REPO_URL="https://github.com/sendtwothreeyears/drbg.git"
 APP_DIR="/opt/boafo"
 ENV_DIR="/etc/boafo"
 BRANCH="main"
@@ -15,13 +15,13 @@ sudo apt-get install -y curl git nginx postgresql-client
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
-# ── PostgreSQL 15 + pgvector ────────────────────────────────────────
-sudo apt-get install -y postgresql-15 postgresql-server-dev-15 build-essential
+# ── PostgreSQL 18 + pgvector ────────────────────────────────────────
+sudo apt-get install -y postgresql-18 postgresql-server-dev-18 build-essential
 cd /tmp
-git clone --branch v0.8.0 https://github.com/pgvector/pgvector.git
+git clone --branch v0.8.1 https://github.com/pgvector/pgvector.git
 cd pgvector
-make PG_CONFIG=/usr/lib/postgresql/15/bin/pg_config
-sudo make PG_CONFIG=/usr/lib/postgresql/15/bin/pg_config install
+make PG_CONFIG=/usr/lib/postgresql/18/bin/pg_config
+sudo make PG_CONFIG=/usr/lib/postgresql/18/bin/pg_config install
 cd /
 rm -rf /tmp/pgvector
 
