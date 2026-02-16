@@ -9,7 +9,6 @@ module.exports = {
       instances: 2,
       exec_mode: "cluster",
       kill_timeout: 5000,
-      env_file: "/etc/boafo/.env",
       env: {
         NODE_ENV: "production",
       },
