@@ -215,7 +215,8 @@ const Conversation = () => {
                   {createdAt && formatConsultDate(createdAt)}
                 </div>
               </div>
-              <div className="flex gap-4 self-start items-center">
+              <div className="flex flex-col items-end self-start">
+              <div className="flex gap-4 items-center">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <span className="font-fakt text-sm text-gray-600">Findings</span>
                   <button
@@ -261,6 +262,7 @@ const Conversation = () => {
               </div>
               <div className="font-fakt text-xs text-gray-400 tracking-wide uppercase mt-1">
                 Demo · For clinician use only
+              </div>
               </div>
             </div>
             <div className="font-fakt font-semibold text-main text-base my-8">
