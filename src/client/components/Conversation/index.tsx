@@ -259,6 +259,9 @@ const Conversation = () => {
                   </button>
                 </label>
               </div>
+              <div className="font-fakt text-xs text-gray-400 tracking-wide uppercase mt-1">
+                Demo · For clinician use only
+              </div>
             </div>
             <div className="font-fakt font-semibold text-main text-base my-8">
               If this is an emergency, call 911 or your local emergency number.
