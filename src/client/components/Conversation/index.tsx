@@ -186,13 +186,13 @@ const Conversation = () => {
   return (
     <div className="h-screen bg-body flex overflow-hidden">
       <div className="fixed top-6 left-6 z-10">
-        {/* <a href="https://kasamd.com" target="_blank" rel="noopener noreferrer">
+        <a href="https://kasamd.com" target="_blank" rel="noopener noreferrer">
           <img
             src="/icons/themed/kasamd_green.png"
             alt="KasaMD"
             className="h-8"
           />
-        </a> */}
+        </a>
       </div>
       <div className="flex flex-col flex-1 min-w-0">
         {/* Messages area */}
