@@ -80,8 +80,8 @@ class Conversations {
         res.end();
       },
       // OnError
-      () => {
-        send({ error: "Stream failed" });
+      (err) => {
+        send({ error: err.message || "Stream failed" });
         res.end();
       },
       toolName,

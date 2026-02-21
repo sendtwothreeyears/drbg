@@ -93,12 +93,12 @@ const Conversation = () => {
         setStreaming(false);
         setMessages((prev) => {
           const last = prev[prev.length - 1];
-          if (last?.role === "assistant" && !last.content) {
+          if (last?.role === "assistant") {
             return prev.slice(0, -1);
           }
           return prev;
         });
-        setError("The response could not be completed. Please try again.");
+        setError(errorMsg || "The response could not be completed. Please try again.");
       },
     );
   };

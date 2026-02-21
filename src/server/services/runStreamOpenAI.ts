@@ -8,7 +8,10 @@ import openaiTools from "../openaiTools";
 import CLINICAL_INTERVIEW from "../prompts/CLINICAL_INTERVIEW";
 import { translateText, LANGUAGE_NAMES } from "./translate";
 import { createDiagnosesMutation } from "../db/operations/diagnoses";
-import { markConversationCompletedMutation, updateAssessmentMutation } from "../db/operations/conversations";
+import {
+  markConversationCompletedMutation,
+  updateAssessmentMutation,
+} from "../db/operations/conversations";
 import { searchGuidelines } from "./searchGuidelines";
 import { generateAssessment } from "./generateAssessment";
 import { getFindingsByConversationQuery } from "../db/operations/findings";
@@ -41,7 +44,8 @@ export async function runStreamOpenAI(
   const language = conversation?.language || "en";
 
   // Fetch messages ONCE before the stream starts
-  const dbMessages: Message[] = await getMessagesByConversationQuery(conversationId);
+  const dbMessages: Message[] =
+    await getMessagesByConversationQuery(conversationId);
 
   // Map messages to OpenAI format
   // For Twi conversations, send original_content (Twi) so OpenAI sees the patient's language
@@ -49,9 +53,10 @@ export async function runStreamOpenAI(
   const messages: OpenAIMessage[] = dbMessages
     .map((m) => ({
       role: m.role as "user" | "assistant",
-      content: (language !== "en" && m.original_content)
-        ? m.original_content
-        : m.content,
+      content:
+        language !== "en" && m.original_content
+          ? m.original_content
+          : m.content,
     }))
     .filter((_, i, arr) => !(i === 0 && arr[0].role === "assistant"));
 
@@ -90,7 +95,8 @@ export async function runStreamOpenAI(
             functionCalls[idx] = { name: "", arguments: "" };
           }
           if (tc.function?.name) functionCalls[idx].name = tc.function.name;
-          if (tc.function?.arguments) functionCalls[idx].arguments += tc.function.arguments;
+          if (tc.function?.arguments)
+            functionCalls[idx].arguments += tc.function.arguments;
         }
       }
     }
@@ -105,25 +111,45 @@ export async function runStreamOpenAI(
     if (language !== "en" && fullText) {
       originalContent = fullText;
       originalLanguage = language;
-      try {
-        englishContent = await translateText(fullText, language, "en");
 
-        // Quality check: if translation is nearly identical to source,
-        // the model likely responded in English instead of the requested language
-        const src = fullText.toLowerCase().trim();
-        const tgt = englishContent.toLowerCase().trim();
-        if (src === tgt || (src.length > 20 && tgt.length > 20 &&
-            Math.abs(src.length - tgt.length) / Math.max(src.length, tgt.length) < 0.1)) {
-          console.warn(
-            `[runStreamOpenAI] Language quality warning: ` +
-            `expected ${LANGUAGE_NAMES[language]} but response appears to be English. ` +
-            `conversationId=${conversationId} responseLength=${fullText.length}`,
+      // Translate with one retry — English must exist before persistence
+      let translationError: unknown;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          englishContent = await translateText(fullText, language, "en");
+          translationError = null;
+          break;
+        } catch (err) {
+          translationError = err;
+          console.error(
+            `[runStreamOpenAI] Translation attempt ${attempt} failed:`,
+            err,
           );
         }
-      } catch (translationError) {
-        console.error("[runStreamOpenAI] Post-stream translation failed, storing original language:", translationError);
-        // Degrade gracefully: store Twi as content so the message persists
-        englishContent = fullText;
+      }
+
+      if (translationError) {
+        throw new Error(
+          "Translation failed. Your response could not be saved. Please resend your message.",
+        );
+      }
+
+      // Quality check: detect if OpenAI responded in English instead of requested language
+      const src = fullText.toLowerCase().trim();
+      const tgt = englishContent.toLowerCase().trim();
+      if (
+        src === tgt ||
+        (src.length > 20 &&
+          tgt.length > 20 &&
+          Math.abs(src.length - tgt.length) /
+            Math.max(src.length, tgt.length) <
+            0.1)
+      ) {
+        console.warn(
+          `[runStreamOpenAI] Language quality warning: ` +
+            `expected ${LANGUAGE_NAMES[language]} but response appears to be English. ` +
+            `conversationId=${conversationId} responseLength=${fullText.length}`,
+        );
       }
     }
 
@@ -195,11 +221,17 @@ export async function runStreamOpenAI(
       onAssessmentLoading();
 
       const findings = await getFindingsByConversationQuery(conversationId);
+      console.log("findings", findings);
+
       const guidelineResults = await Promise.all(
         differentials.map((d) => searchGuidelines(d.condition, findings)),
       );
 
-      const { text, sources } = await generateAssessment(findings, differentials, guidelineResults);
+      const { text, sources } = await generateAssessment(
+        findings,
+        differentials,
+        guidelineResults,
+      );
       await updateAssessmentMutation(conversationId, text, sources);
 
       meta.diagnoses = true;
