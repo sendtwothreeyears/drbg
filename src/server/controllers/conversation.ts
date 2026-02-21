@@ -18,7 +18,7 @@ import {
 
 import { getDiagnosesByConversationQuery } from "../db/operations/diagnoses";
 
-import { runStream } from "../services/runStream";
+import { runStreamOpenAI } from "../services/runStreamOpenAI";
 import { translateText } from "../services/translate";
 import { StreamEvent } from "../../types";
 
@@ -63,7 +63,7 @@ class Conversations {
       toolName = "generate_differentials";
     }
 
-    await runStream(
+    await runStreamOpenAI(
       conversationId,
       // onText -> sends chunked messages back to client
       (text) => send({ text }),
@@ -102,13 +102,19 @@ class Conversations {
       });
     }
 
-    const conversationId = await createConversationMutation();
+    const conversationId = await createConversationMutation(language);
     await createMessageMutation(
       conversationId,
       "assistant",
       "I'll help you work through your symptoms. Let's take a closer look.",
     );
-    await createMessageMutation(conversationId, "user", englishMessage);
+    await createMessageMutation(
+      conversationId,
+      "user",
+      englishMessage,
+      language !== "en" ? message : null,
+      language !== "en" ? language : null,
+    );
     res.json({ conversationId });
   }
 
@@ -124,7 +130,13 @@ class Conversations {
       if (language !== "en") {
         console.log(`[translate] lang=${language} original=${message.length}chars translated=${englishMessage.length}chars`);
       }
-      await createMessageMutation(conversationId, "user", englishMessage);
+      await createMessageMutation(
+        conversationId,
+        "user",
+        englishMessage,
+        language !== "en" ? message : null,
+        language !== "en" ? language : null,
+      );
       res.json({ success: true });
     } catch (error) {
       console.error("Translation failed:", error);
