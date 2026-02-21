@@ -10,6 +10,7 @@ export const startStream = (
   onToolUse: (tool: ToolUseEvent) => void,
   onAssessmentLoading: () => void,
   onDone: (meta?: Record<string, any>) => void,
+  onError?: (errorMsg: string) => void,
 ) => {
   // Server sends raw text via res.write():  "data: {\"text\":\"hi\"}\n\n"
   // EventSource receives that raw text stream
@@ -44,13 +45,15 @@ export const startStream = (
       onDone(meta);
     } else if (data.error) {
       eventSource.close();
-      onDone();
+      if (onError) onError(data.error);
+      else onDone();
     }
   };
 
   eventSource.onerror = () => {
     eventSource.close();
-    onDone();
+    if (onError) onError("Connection lost. Please try again.");
+    else onDone();
   };
 
   return eventSource;

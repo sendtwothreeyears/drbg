@@ -42,6 +42,9 @@ class Conversations {
     // We don't wait until data is available, we make sure the stream is active first and then actively write to it.
     res.flushHeaders();
 
+    // Disable EventSource auto-reconnect to prevent duplicate streams
+    res.write("retry: 86400000\n\n");
+
     let closed = false;
     // when browser tab closed, or client's eventSource.close() called
     req.on("close", () => {
@@ -102,11 +105,19 @@ class Conversations {
       });
     }
 
+    const GREETINGS: Record<string, string> = {
+      en: "I'll help you work through your symptoms. Let's take a closer look.",
+      ak: "Mɛboa wo na yɛahwɛ wo yare no mu. Ma yɛnhwɛ mu yie.",
+    };
+
+    const greeting = GREETINGS[language] || GREETINGS.en;
     const conversationId = await createConversationMutation(language);
     await createMessageMutation(
       conversationId,
       "assistant",
-      "I'll help you work through your symptoms. Let's take a closer look.",
+      GREETINGS.en,
+      language !== "en" ? greeting : null,
+      language !== "en" ? language : null,
     );
     await createMessageMutation(
       conversationId,
@@ -199,6 +210,7 @@ class Conversations {
       completed: conversation?.completed,
       assessment: conversation?.assessment,
       assessmentSources: conversation?.assessment_sources,
+      language: conversation?.language || "en",
       messages,
     });
   }

@@ -6,7 +6,7 @@ import { extractFindings } from "./extractFindings";
 import { createOpenAIChatStream, OpenAIMessage } from "./openai-chat";
 import openaiTools from "../openaiTools";
 import CLINICAL_INTERVIEW from "../prompts/CLINICAL_INTERVIEW";
-import { translateText } from "./translate";
+import { translateText, LANGUAGE_NAMES } from "./translate";
 import { createDiagnosesMutation } from "../db/operations/diagnoses";
 import { markConversationCompletedMutation, updateAssessmentMutation } from "../db/operations/conversations";
 import { searchGuidelines } from "./searchGuidelines";
@@ -15,9 +15,13 @@ import { getFindingsByConversationQuery } from "../db/operations/findings";
 import { randomUUID } from "crypto";
 
 function getSystemPrompt(language: string): string {
-  const languageInstruction = language === "ak"
-    ? "\n\nIMPORTANT: Conduct this entire clinical interview in Twi (Akan). The patient speaks Twi. Respond in Twi. If the patient uses English medical terms (e.g., 'malaria', 'paracetamol'), acknowledge them naturally — this is normal code-switching."
-    : "";
+  if (language === "en") return CLINICAL_INTERVIEW;
+
+  const langName = LANGUAGE_NAMES[language] || language;
+  const languageInstruction =
+    `\n\nIMPORTANT: Conduct this entire clinical interview in ${langName}. ` +
+    `The patient speaks ${langName}. Respond in ${langName}. ` +
+    `If the patient uses English medical terms, acknowledge them naturally — this is normal code-switching.`;
 
   return CLINICAL_INTERVIEW + languageInstruction;
 }
@@ -101,7 +105,26 @@ export async function runStreamOpenAI(
     if (language !== "en" && fullText) {
       originalContent = fullText;
       originalLanguage = language;
-      englishContent = await translateText(fullText, language, "en");
+      try {
+        englishContent = await translateText(fullText, language, "en");
+
+        // Quality check: if translation is nearly identical to source,
+        // the model likely responded in English instead of the requested language
+        const src = fullText.toLowerCase().trim();
+        const tgt = englishContent.toLowerCase().trim();
+        if (src === tgt || (src.length > 20 && tgt.length > 20 &&
+            Math.abs(src.length - tgt.length) / Math.max(src.length, tgt.length) < 0.1)) {
+          console.warn(
+            `[runStreamOpenAI] Language quality warning: ` +
+            `expected ${LANGUAGE_NAMES[language]} but response appears to be English. ` +
+            `conversationId=${conversationId} responseLength=${fullText.length}`,
+          );
+        }
+      } catch (translationError) {
+        console.error("[runStreamOpenAI] Post-stream translation failed, storing original language:", translationError);
+        // Degrade gracefully: store Twi as content so the message persists
+        englishContent = fullText;
+      }
     }
 
     // Parse accumulated function calls into ToolCall format
@@ -125,7 +148,7 @@ export async function runStreamOpenAI(
       // Tool calls present — store as content blocks (same shape as Anthropic version)
       const contentBlocks: ContentBlock[] = [];
       if (fullText) {
-        contentBlocks.push({ type: "text", text: fullText });
+        contentBlocks.push({ type: "text", text: englishContent });
       }
       for (const tc of toolCalls) {
         contentBlocks.push({
@@ -139,6 +162,8 @@ export async function runStreamOpenAI(
         conversationId,
         "assistant",
         JSON.stringify(contentBlocks),
+        originalContent,
+        originalLanguage,
       );
 
       // Notify client of each tool call
@@ -190,6 +215,7 @@ export async function runStreamOpenAI(
     // Signal stream completion
     onDone(meta);
   } catch (error) {
+    console.error("[runStreamOpenAI] Stream error:", error);
     onError(error as Error);
   }
 }

@@ -20,6 +20,6 @@ export function createOpenAIChatStream(
     messages: [{ role: "system", content: system }, ...messages],
     stream: true,
     ...(tools && tools.length > 0 ? { tools } : {}),
-    max_tokens: 1024,
+    max_completion_tokens: 1024,
   });
 }
