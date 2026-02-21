@@ -2,9 +2,12 @@ import pool from "../";
 import { randomUUID } from "crypto";
 import type { Conversation } from "../../../types";
 
-const createConversationMutation = async (): Promise<string> => {
+const createConversationMutation = async (language: string = "en"): Promise<string> => {
   const id = randomUUID();
-  await pool.query("INSERT INTO conversations (conversationid) VALUES ($1)", [id]);
+  await pool.query(
+    "INSERT INTO conversations (conversationid, language) VALUES ($1, $2)",
+    [id, language],
+  );
   return id;
 };
 

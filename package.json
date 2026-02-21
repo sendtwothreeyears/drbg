@@ -16,7 +16,8 @@
     "nice:parse": "tsx src/server/scripts/nice/parse.ts",
     "nice:embed": "tsx src/server/scripts/nice/embed.ts",
     "ghana:download": "tsx src/server/scripts/ghana/download.ts",
-    "embed:all": "npm run who:embed && npm run nice:embed"
+    "embed:all": "npm run who:embed && npm run nice:embed",
+    "db:migrate:001": "tsx src/server/scripts/migrate-001-add-language-support.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
