@@ -225,15 +225,15 @@ export const getMessagesByConversationQuery = async (conversationId: string) => 
 
 #### Phase 1 Tasks
 
-- [ ] Add `language` column to `conversations` in `schema.sql`
-- [ ] Add `original_content` and `original_language` columns to `messages` in `schema.sql`
-- [ ] Create migration script `migrate-001-add-language-support.ts`
-- [ ] Update `Conversation` type in `src/types/conversation.ts`
-- [ ] Update `Message` type in `src/types/message.ts`
-- [ ] Update `createConversationMutation()` in `src/server/db/operations/conversations.ts`
-- [ ] Update `createMessageMutation()` in `src/server/db/operations/messages.ts`
-- [ ] Update `getMessagesByConversationQuery()` in `src/server/db/operations/messages.ts`
-- [ ] Add `db:migrate:001` script to `package.json`
+- [x] Add `language` column to `conversations` in `schema.sql`
+- [x] Add `original_content` and `original_language` columns to `messages` in `schema.sql`
+- [x] Create migration script `migrate-001-add-language-support.ts`
+- [x] Update `Conversation` type in `src/types/conversation.ts`
+- [x] Update `Message` type in `src/types/message.ts`
+- [x] Update `createConversationMutation()` in `src/server/db/operations/conversations.ts`
+- [x] Update `createMessageMutation()` in `src/server/db/operations/messages.ts`
+- [x] Update `getMessagesByConversationQuery()` in `src/server/db/operations/messages.ts`
+- [x] Add `db:migrate:001` script to `package.json`
 - [ ] Run migration on development database
 - [ ] Verify existing conversations still work (English defaults)
 
@@ -484,22 +484,22 @@ async createConversation(req: Request, res: Response) {
 
 #### Phase 2 Tasks
 
-- [ ] Create `src/server/services/openai-chat.ts` with streaming support
-- [ ] Extract and port clinical interview system prompt to OpenAI format
-- [ ] Add language-awareness to system prompt (Twi instruction block)
-- [ ] Convert `collect_demographics` tool definition to OpenAI function calling
-- [ ] Convert `generate_differentials` tool definition to OpenAI function calling
-- [ ] Refactor `runStream.ts` to use OpenAI streaming instead of Claude
-- [ ] Handle OpenAI incremental function argument accumulation
-- [ ] Add post-stream translation of assistant messages (Twi → English for storage)
-- [ ] Add bidirectional translation support to `translate.ts` (EN→Twi prompt)
-- [ ] Update `createConversation()` to pass `language` to DB
+- [x] Create `src/server/services/openai-chat.ts` with streaming support
+- [x] Extract and port clinical interview system prompt to OpenAI format
+- [x] Add language-awareness to system prompt (Twi instruction block)
+- [x] Convert `collect_demographics` tool definition to OpenAI function calling
+- [x] Convert `generate_differentials` tool definition to OpenAI function calling
+- [x] Create `runStreamOpenAI.ts` as parallel OpenAI streaming engine (Anthropic `runStream.ts` preserved for rollback)
+- [x] Handle OpenAI incremental function argument accumulation
+- [x] Add post-stream translation of assistant messages (Twi → English for storage)
+- [x] Add bidirectional translation support to `translate.ts` (modular language registry)
+- [x] Update `createConversation()` to pass `language` to DB
 - [ ] Validate: English conversations work identically via OpenAI
 - [ ] Validate: Twi conversations — OpenAI asks clinical follow-up questions in Twi
 - [ ] Validate: Tool calls (demographics, differentials) fire correctly via OpenAI function calling
 - [ ] Validate: Claude findings extraction (Haiku) still works on English `content`
 - [ ] Validate: Assessment generation (Sonnet) still works on English transcripts
-- [ ] Keep Claude `createChatStream()` available for rollback if OpenAI interview quality is insufficient
+- [x] Keep Claude `createChatStream()` available for rollback if OpenAI interview quality is insufficient
 
 ---
 
@@ -556,12 +556,12 @@ Verify this method returns `original_content` and `original_language` from the q
 
 #### Phase 3 Tasks
 
-- [ ] Update `createConversationMessage()` to store both language versions
-- [ ] Verify `createConversation()` stores both versions (done in Phase 2)
-- [ ] Verify assistant message storage stores both versions (done in Phase 2)
-- [ ] Audit `getLastUserMessageQuery()` — must read `content` (English)
-- [ ] Audit assessment pipeline message retrieval — must read `content`
-- [ ] Verify `getConversationAndMessages()` returns `original_content` and `original_language`
+- [x] Update `createConversationMessage()` to store both language versions
+- [x] Verify `createConversation()` stores both versions (done in Phase 2)
+- [x] Verify assistant message storage stores both versions (done in Phase 2)
+- [x] Audit `getLastUserMessageQuery()` — must read `content` (English)
+- [x] Audit assessment pipeline message retrieval — must read `content`
+- [x] Verify `getConversationAndMessages()` returns `original_content` and `original_language`
 - [ ] End-to-end test: Twi conversation → both transcripts stored → findings extraction succeeds → assessment generates
 
 ---
