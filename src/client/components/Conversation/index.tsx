@@ -14,6 +14,7 @@ import DiagnosisPanel from "./DiagnosisPanel";
 import FindingsPanel, { FindingsPanelHandle } from "./FindingsPanel";
 import LoadingPanel from "./LoadingPanel";
 import Accordion from "../../shared/Accordion";
+import LanguageSelector from "../LanguageSelector";
 import ReactMarkdown from "react-markdown";
 
 // UTILITY IMPORTS
@@ -36,9 +37,18 @@ const Conversation = () => {
   const [assessmentLoading, setAssessmentLoading] = useState(false);
   const [assessment, setAssessment] = useState<string | null>(null);
   const [createdAt, setCreatedAt] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [language, setLanguage] = useState(
+    () => sessionStorage.getItem("boafo-language") || "en",
+  );
   const textAreaRef = useRef<TextAreaHandle>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const findingsRef = useRef<FindingsPanelHandle>(null);
+
+  const onLanguageChange = (lang: string) => {
+    setLanguage(lang);
+    sessionStorage.setItem("boafo-language", lang);
+  };
 
   const streamResponse = () => {
     setStreaming(true);
@@ -107,13 +117,25 @@ const Conversation = () => {
     if (!message.trim() || streaming) return;
     const text = message.trim();
     setMessage("");
+    setError(null);
     setMessages((prev) => [...prev, { role: "user", content: text }]);
-    await axios.post(`/api/conversation/${conversationId}/message`, {
-      message: text,
-    });
-    // When the page loads, and the last message is a completed message from the
-    // AI, the streaming response kicks off again AFTER the user submits a message.
-    streamResponse();
+    try {
+      await axios.post(`/api/conversation/${conversationId}/message`, {
+        message: text,
+        language,
+      });
+      // When the page loads, and the last message is a completed message from the
+      // AI, the streaming response kicks off again AFTER the user submits a message.
+      streamResponse();
+    } catch (err: any) {
+      setMessages((prev) => prev.slice(0, -1));
+      setMessage(text);
+      if (err.response?.data?.error === "translation_failed") {
+        setError("Unable to translate your message. Please try again or switch to English.");
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
+    }
   };
 
   const renderMessages = () =>
@@ -314,12 +336,23 @@ const Conversation = () => {
         {!completed && (
           <div className="shrink-0 bg-body pb-4 max-w-2xl w-full mx-auto">
             <div className="bg-white p-2 rounded-lg shadow-sm border-gray-200">
+              <div className="flex justify-between items-center mb-2 px-1">
+                <LanguageSelector language={language} onChange={onLanguageChange} />
+              </div>
+              {error && (
+                <div className="font-fakt text-red-600 text-sm px-1 mb-2">{error}</div>
+              )}
+              {language === "ak" && (
+                <div className="font-fakt text-gray-400 text-xs px-1 mb-1">
+                  Your message will be translated to English. Responses will be in English.
+                </div>
+              )}
               <TextArea
                 ref={textAreaRef}
                 value={message}
                 onChange={setMessage}
                 onSubmit={handleSend}
-                placeholder="Type your message..."
+                placeholder={language === "ak" ? "Kyerɛ me wo yare ho..." : "Type your message..."}
               />
               <div className="flex justify-end">
                 <button

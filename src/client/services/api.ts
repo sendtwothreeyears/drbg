@@ -1,9 +1,10 @@
 import axios from "axios";
 import type { Finding } from "../../types";
 
-const createNewConversation = async (message: string) => {
+const createNewConversation = async (message: string, language: string = "en") => {
   return await axios.post<{ conversationId: string }>("/api/create", {
     message,
+    language,
   });
 };
 

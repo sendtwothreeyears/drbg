@@ -2,14 +2,17 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import TextArea, { TextAreaHandle } from "../../shared/TextArea";
 import Spinner from "../../shared/Spinner";
+import LanguageSelector from "../LanguageSelector";
 import { createNewConversation } from "../../services/api";
 
 type GetStartedProps = {
   onStartConversation: (message: string) => void;
   loading: boolean;
+  language: string;
+  onLanguageChange: (lang: string) => void;
 };
 
-const GetStarted = ({ onStartConversation, loading }: GetStartedProps) => {
+const GetStarted = ({ onStartConversation, loading, language, onLanguageChange }: GetStartedProps) => {
   const [message, setMessage] = useState("");
   const textAreaRef = useRef<TextAreaHandle>(null);
 
@@ -17,22 +20,21 @@ const GetStarted = ({ onStartConversation, loading }: GetStartedProps) => {
     textAreaRef.current?.focus();
   }, []);
 
+  const placeholder = language === "ak"
+    ? "Kyerɛ me wo yare ho..."
+    : "Describe your symptoms...";
+
   return (
-    <div
-      className="
-				bg-white
-				p-2
-				rounded-lg
-				shadow-sm
-				border-gray-200
-			"
-    >
+    <div className="bg-white p-2 rounded-lg shadow-sm border-gray-200">
+      <div className="flex justify-between items-center mb-2 px-1">
+        <LanguageSelector language={language} onChange={onLanguageChange} />
+      </div>
       <TextArea
         ref={textAreaRef}
         value={message}
         onChange={setMessage}
         onSubmit={() => onStartConversation(message)}
-        placeholder="Describe your symptoms..."
+        placeholder={placeholder}
       />
       <div className="flex justify-end">
         {loading ? (
@@ -54,14 +56,26 @@ const GetStarted = ({ onStartConversation, loading }: GetStartedProps) => {
 const Home = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [language, setLanguage] = useState("en");
+  const [error, setError] = useState<string | null>(null);
+
+  const onLanguageChange = (lang: string) => {
+    setLanguage(lang);
+    sessionStorage.setItem("boafo-language", lang);
+  };
 
   const onStartConversation = async (message: string) => {
     try {
       setLoading(true);
-      const { data } = await createNewConversation(message);
+      setError(null);
+      const { data } = await createNewConversation(message, language);
       navigate(`/conversation/${data.conversationId}`);
-    } catch (err) {
-      console.log("Here is an error", err);
+    } catch (err: any) {
+      if (err.response?.data?.error === "translation_failed") {
+        setError("Unable to translate your message. Please try again or switch to English.");
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -107,7 +121,17 @@ const Home = () => {
           <GetStarted
             onStartConversation={onStartConversation}
             loading={loading}
+            language={language}
+            onLanguageChange={onLanguageChange}
           />
+          {error && (
+            <div className="font-fakt text-red-600 text-sm text-center mt-2">{error}</div>
+          )}
+          {language === "ak" && (
+            <div className="font-fakt text-gray-400 text-sm text-center mt-2">
+              Your message will be translated to English for processing. Responses will be in English.
+            </div>
+          )}
           <div className="font-fakt text-gray-400 text-sm text-center mt-2">
             This is a demo. Not a substitute for professional medical advice.
           </div>

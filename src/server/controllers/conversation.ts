@@ -19,6 +19,7 @@ import {
 import { getDiagnosesByConversationQuery } from "../db/operations/diagnoses";
 
 import { runStream } from "../services/runStream";
+import { translateText } from "../services/translate";
 import { StreamEvent } from "../../types";
 
 class Conversations {
@@ -85,14 +86,29 @@ class Conversations {
   }
 
   async createConversation(req: Request, res: Response) {
-    const { message } = req.body;
+    const { message, language = "en" } = req.body;
+
+    let englishMessage: string;
+    try {
+      englishMessage = await translateText(message, language, "en");
+      if (language !== "en") {
+        console.log(`[translate] lang=${language} original=${message.length}chars translated=${englishMessage.length}chars`);
+      }
+    } catch (error) {
+      console.error("Translation failed:", error);
+      return res.status(502).json({
+        error: "translation_failed",
+        message: "Unable to translate your message. Please try again.",
+      });
+    }
+
     const conversationId = await createConversationMutation();
     await createMessageMutation(
       conversationId,
       "assistant",
       "I'll help you work through your symptoms. Let's take a closer look.",
     );
-    await createMessageMutation(conversationId, "user", message);
+    await createMessageMutation(conversationId, "user", englishMessage);
     res.json({ conversationId });
   }
 
@@ -101,9 +117,22 @@ class Conversations {
     res: Response,
   ) {
     const { conversationId } = req.params;
-    const { message } = req.body;
-    await createMessageMutation(conversationId, "user", message);
-    res.json({ success: true });
+    const { message, language = "en" } = req.body;
+
+    try {
+      const englishMessage = await translateText(message, language, "en");
+      if (language !== "en") {
+        console.log(`[translate] lang=${language} original=${message.length}chars translated=${englishMessage.length}chars`);
+      }
+      await createMessageMutation(conversationId, "user", englishMessage);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Translation failed:", error);
+      return res.status(502).json({
+        error: "translation_failed",
+        message: "Unable to translate your message. Please try again.",
+      });
+    }
   }
 
   async createDemographics(

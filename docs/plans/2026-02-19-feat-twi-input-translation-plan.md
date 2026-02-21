@@ -1,15 +1,15 @@
 ---
-title: "feat: Add Twi Input Translation via GhanaNLP Khaya"
+title: "feat: Add Twi Input Translation via OpenAI gpt-4o-mini"
 type: feat
 status: active
 date: 2026-02-19
 ---
 
-# feat: Add Twi Input Translation via GhanaNLP Khaya
+# feat: Add Twi Input Translation via OpenAI gpt-4o-mini
 
 ## Overview
 
-Add one-directional Twi-to-English translation to Boafo so patients can type symptoms in Twi. The server translates input to English via GhanaNLP Khaya before sending to Claude. Claude responds in English (no response translation). This MVP validates whether GhanaNLP Khaya can translate Twi patient input accurately enough for clinical interviews.
+Add one-directional Twi-to-English translation to Boafo so patients can type symptoms in Twi. The server translates input to English via OpenAI gpt-4o-mini before sending to Claude. Claude responds in English (no response translation). This MVP validates whether LLM-based translation can handle Twi patient input accurately enough for clinical interviews. OpenAI was chosen over dedicated NMT APIs (GhanaNLP Khaya, Google Cloud Translation) because gpt-4o-mini handles mixed Twi/English code-switching naturally and understands medical context — both critical for real patient input.
 
 ## Problem Statement
 
@@ -24,8 +24,8 @@ Patient input is translated to English at the server boundary. All Claude proces
 **Flow:**
 
 ```
-Patient (Twi) → Frontend → POST /api/create {message, language: "tw"}
-  → Server: GhanaNLP Khaya translate(tw→en)
+Patient (Twi) → Frontend → POST /api/create {message, language: "ak"}
+  → Server: OpenAI gpt-4o-mini translate(ak→en)
   → Store English in DB
   → Claude (Opus) interview in English
   → Stream English response back to patient
@@ -42,7 +42,7 @@ Patient (Twi) → Frontend → POST /api/create {message, language: "tw"}
 │  Home Page                    Conversation Page   │
 │  ┌──────────────┐            ┌──────────────┐    │
 │  │ Lang Selector │            │ Lang Selector │    │
-│  │ [EN] [TW]    │            │ [EN] [TW]    │    │
+│  │ [EN] [AK]    │            │ [EN] [AK]    │    │
 │  ├──────────────┤            ├──────────────┤    │
 │  │ Textarea     │            │ Textarea     │    │
 │  │ (placeholder │            │ (placeholder │    │
@@ -62,7 +62,7 @@ Patient (Twi) → Frontend → POST /api/create {message, language: "tw"}
 │  │  if language !== "en":               │        │
 │  │    translatedText = await            │        │
 │  │      translateService.translate(     │        │
-│  │        message, "tw", "en"           │        │
+│  │        message, "ak", "en"           │        │
 │  │      )                               │        │
 │  │  else: translatedText = message      │        │
 │  └──────────────┬───────────────────────┘        │
@@ -82,77 +82,48 @@ Patient (Twi) → Frontend → POST /api/create {message, language: "tw"}
 
 #### Phase 1: Translation Service (`src/server/services/translate.ts`)
 
-Build the GhanaNLP Khaya API wrapper.
+Build the OpenAI gpt-4o-mini translation wrapper.
 
 **Tasks:**
-- [ ] Create `src/server/services/translate.ts` with `translateText(text: string, from: string, to: string): Promise<string>`
-- [ ] Add `GHANLP_API_KEY` to `.env` and document in `.env.example`
-- [ ] Validate language param against allowlist (`en`, `tw`)
-- [ ] Handle error scenarios: API down, timeout, empty response, rate limit (429)
-- [ ] Set request timeout (e.g., 10 seconds)
-- [ ] Skip translation when `from === "en"` (passthrough)
-- [ ] Validate non-empty input before calling API
+- [x] Create `src/server/services/translate.ts` with `translateText(text: string, from: string, to: string): Promise<string>`
+- [x] Use existing `OPENAI_API_KEY` from `.env` (no new credentials needed)
+- [x] Validate language param against allowlist (`en`, `ak`)
+- [x] Handle error scenarios: API down, empty response
+- [x] Skip translation when `from === "en"` (passthrough)
+- [x] Validate non-empty input before calling API
 
-**GhanaNLP Khaya API contract:**
+**OpenAI translation contract:**
 
 ```typescript
 // src/server/services/translate.ts
+// Uses OpenAI gpt-4o-mini with a clinical Twi translation system prompt.
+// System prompt handles mixed Twi/English code-switching and preserves medical meaning.
+// temperature: 0 for deterministic, faithful translations.
 
-// POST https://translation.ghananlp.org/v1/translate
-// Headers: { "Ocp-Apim-Subscription-Key": GHANANLP_API_KEY }
-// Body: { "in": "Meyare me tirim", "from": "tw", "to": "en" }
-// Response: string (translated text)
+import OpenAI from "openai";
 
-export async function translateText(
-  text: string,
-  from: string,
-  to: string
-): Promise<string> {
+const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const SYSTEM_PROMPT = `You are translating patient symptom descriptions from Twi to English for a clinical intake system. Translate accurately, preserving medical meaning. Patients may mix Twi and English — translate the Twi portions and preserve the English portions. Return only the English translation, nothing else.`;
+
+export async function translateText(text: string, from: string, to: string): Promise<string> {
   if (from === "en") return text;
   if (!text.trim()) return text;
-
-  const ALLOWED_LANGUAGES = ["en", "tw"];
-  if (!ALLOWED_LANGUAGES.includes(from) || !ALLOWED_LANGUAGES.includes(to)) {
-    throw new Error(`Unsupported language pair: ${from} → ${to}`);
-  }
-
-  const response = await fetch(
-    "https://translation.ghananlp.org/v1/translate",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Ocp-Apim-Subscription-Key": process.env.GHANANLP_API_KEY!,
-      },
-      body: JSON.stringify({ in: text, from, to }),
-      signal: AbortSignal.timeout(10_000),
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error(`Translation API error: ${response.status}`);
-  }
-
-  const translated = await response.text();
-  if (!translated.trim()) {
-    throw new Error("Translation API returned empty response");
-  }
-
-  return translated;
+  // ... validates allowlist, calls gpt-4o-mini, returns translated text
 }
 ```
 
-**Success criteria:** Service translates Twi text to English, handles all error cases gracefully, and passes through English input untouched.
+**Success criteria:** Service translates Twi text to English, handles mixed Twi/English code-switching, handles all error cases gracefully, and passes through English input untouched.
 
 #### Phase 2: Backend Route Integration
 
 Wire translation into the existing request handlers.
 
 **Files modified:**
-- [ ] `src/server/controllers/conversation.ts` — Accept `language` field in request body for both `createConversation()` and `createConversationMessage()`
-- [ ] Before `createMessageMutation()`, call `translateText()` if language is not English
-- [ ] Store the translated English text in DB (existing behavior, same field)
-- [ ] Define error handling strategy: if translation fails, return a 502 error with a message the frontend can display
+- [x] `src/server/controllers/conversation.ts` — Accept `language` field in request body for both `createConversation()` and `createConversationMessage()`
+- [x] Before `createMessageMutation()`, call `translateText()` if language is not English
+- [x] Store the translated English text in DB (existing behavior, same field)
+- [x] Define error handling strategy: if translation fails, return a 502 error with a message the frontend can display
 
 **Integration in `createConversation()` (~line 87):**
 
@@ -207,10 +178,10 @@ try {
 Add language selection to Home and Conversation pages.
 
 **Files modified:**
-- [ ] Create `src/client/components/LanguageSelector/index.tsx` — Reusable toggle component (English / Twi)
-- [ ] `src/client/components/Home/index.tsx` — Add LanguageSelector above textarea, update placeholder, pass language to API call
-- [ ] `src/client/components/Conversation/index.tsx` — Add LanguageSelector, pass language in follow-up message requests
-- [ ] `src/client/services/api.ts` — Update `createNewConversation()` and message-sending functions to accept and send `language` param
+- [x] Create `src/client/components/LanguageSelector/index.tsx` — Reusable toggle component (English / Twi)
+- [x] `src/client/components/Home/index.tsx` — Add LanguageSelector above textarea, update placeholder, pass language to API call
+- [x] `src/client/components/Conversation/index.tsx` — Add LanguageSelector, pass language in follow-up message requests
+- [x] `src/client/services/api.ts` — Update `createNewConversation()` and message-sending functions to accept and send `language` param
 
 **LanguageSelector component:**
 
@@ -222,24 +193,24 @@ interface LanguageSelectorProps {
   onChange: (lang: string) => void;
 }
 
-export function LanguageSelector({ language, onChange }: LanguageSelectorProps) {
+const LanguageSelector = ({ language, onChange }: LanguageSelectorProps) => {
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-1">
       <button
-        className={`px-3 py-1 rounded ${language === "en" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+        className={`font-fakt text-sm px-3 py-1 rounded-full transition-colors ${language === "en" ? "bg-main text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
         onClick={() => onChange("en")}
       >
         English
       </button>
       <button
-        className={`px-3 py-1 rounded ${language === "tw" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
-        onClick={() => onChange("tw")}
+        className={`font-fakt text-sm px-3 py-1 rounded-full transition-colors ${language === "ak" ? "bg-main text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}
+        onClick={() => onChange("ak")}
       >
         Twi
       </button>
     </div>
   );
-}
+};
 ```
 
 **Home page integration:**
@@ -249,8 +220,8 @@ export function LanguageSelector({ language, onChange }: LanguageSelectorProps) 
 
 const [language, setLanguage] = useState("en");
 
-const placeholder = language === "tw"
-  ? "Kyere me wo yare ho..."   // "Tell me about your illness..."
+const placeholder = language === "ak"
+  ? "Kyerɛ me wo yare ho..."   // "Tell me about your illness..."
   : "Describe your symptoms...";
 
 // In onStartConversation:
@@ -283,24 +254,29 @@ export async function createNewConversation(message: string, language: string = 
 Handle translation failures gracefully in the frontend.
 
 **Tasks:**
-- [ ] Show brief "Translating..." indicator during the translation + Claude processing phase (optional for MVP — the existing loading state may suffice)
-- [ ] If the backend returns a `translation_failed` error, display a user-friendly message
-- [ ] Consider a small note near the textarea when Twi is selected: "Your message will be translated to English for processing. Responses will be in English."
+- [x] If the backend returns a `translation_failed` error, display a user-friendly message
+- [x] Show info note near textarea when Twi is selected: "Your message will be translated to English for processing. Responses will be in English."
 
 **Success criteria:** Patient is not confused by the translation step, and errors are surfaced clearly.
 
 ## Alternative Approaches Considered
 
-### 1. Client-side translation (Rejected)
-Translate in the browser before sending to the backend. **Rejected because:** Exposes GhanaNLP API key in the frontend bundle, adds client-side complexity, and patient PHI would transit through a third party from the client rather than server-to-server.
+### 1. GhanaNLP Khaya (Considered, not chosen for MVP)
+Purpose-built NMT for Ghanaian languages with 500+ community contributors. Likely the best pure-Twi translation quality. **Not chosen because:** Free tier limited to 100 calls/month (insufficient for testing); $14.95/mo for 3,000 calls. May revisit if LLM translation quality proves insufficient.
 
-### 2. Claude as translator (Rejected)
-Use Claude directly to translate Twi to English. **Rejected because:** Claude has limited Twi capability. Dedicated NMT (neural machine translation) services like GhanaNLP Khaya are purpose-built for Ghanaian languages with 500+ community contributors. Claude is competitive for major languages (Yoruba) but weaker for Twi/Akan.
+### 2. Google Cloud Translation (Considered, not chosen for MVP)
+Supports Twi via language code `ak`. 500K characters/month free tier. **Not chosen because:** Dedicated NMT — doesn't understand medical context or handle Twi/English code-switching as well as an LLM.
 
-### 3. Store both Twi and English in DB (Deferred)
+### 3. Claude as translator (Rejected)
+Use Claude directly to translate Twi to English. **Rejected because:** No published Twi benchmarks for Claude. GPT-4o family leads African language benchmarks (IrokoBench, AfroBench).
+
+### 4. Client-side translation (Rejected)
+Translate in the browser before sending to the backend. **Rejected because:** Exposes API key in the frontend bundle, adds client-side complexity, and patient PHI would transit through a third party from the client rather than server-to-server.
+
+### 5. Store both Twi and English in DB (Deferred)
 Store the original Twi text alongside the English translation. **Deferred because:** Requires DB schema changes (out of scope for MVP). Acknowledged as a gap — the original Twi text is lost. This should be addressed in the next iteration.
 
-### 4. Translate Claude's response back to Twi (Deferred)
+### 6. Translate Claude's response back to Twi (Deferred)
 Full bidirectional translation. **Deferred because:** Doubles the translation API calls, adds latency, and the primary goal of this MVP is to validate Twi→English input quality. Response translation is a separate feature.
 
 ## Acceptance Criteria
@@ -311,7 +287,7 @@ Full bidirectional translation. **Deferred because:** Doubles the translation AP
 - [ ] Language selector is visible on the Conversation page
 - [ ] English is the default language
 - [ ] Selecting Twi updates the textarea placeholder to a Twi string
-- [ ] Submitting a message with `language=tw` translates it to English via GhanaNLP Khaya before storage
+- [ ] Submitting a message with `language=ak` translates it to English via OpenAI gpt-4o-mini before storage
 - [ ] Submitting a message with `language=en` (or omitted) skips translation entirely
 - [ ] Translated English text is stored in the database (same `content` field)
 - [ ] Claude receives English text and responds normally
@@ -322,18 +298,16 @@ Full bidirectional translation. **Deferred because:** Doubles the translation AP
 ### Non-Functional Requirements
 
 - [ ] Translation adds no more than 5 seconds to time-to-first-token (target: < 2s)
-- [ ] GhanaNLP API timeout set to 10 seconds
 - [ ] API key stored server-side only (never in frontend bundle)
-- [ ] Language parameter validated server-side against allowlist (`en`, `tw`)
+- [ ] Language parameter validated server-side against allowlist (`en`, `ak`)
 - [ ] UTF-8 encoding preserved throughout (Twi diacritics: open-e, open-o)
 
 ### Error Handling Requirements
 
-- [ ] GhanaNLP API down → Return 502 with `translation_failed` error
-- [ ] GhanaNLP API timeout → Same 502 response
-- [ ] GhanaNLP returns empty → Same 502 response
+- [ ] OpenAI API down → Return 502 with `translation_failed` error
+- [ ] OpenAI returns empty → Same 502 response
 - [ ] Invalid language parameter → Fallback to English (no translation)
-- [ ] Missing API key → Log error on startup, translation calls fail with clear error
+- [ ] Missing API key → Translation calls fail with clear error
 
 ### Quality Gates
 
@@ -354,26 +328,24 @@ Full bidirectional translation. **Deferred because:** Doubles the translation AP
 
 | Dependency | Status | Action Required |
 |-----------|--------|-----------------|
-| GhanaNLP Khaya API key | **Not acquired** | Sign up at https://translation.ghananlp.org/ and subscribe for API credentials |
-| GhanaNLP API pricing | **Unknown** | Confirm pricing tier and rate limits during sign-up |
-| GhanaNLP API contract | **Partially known** | Endpoint and auth header known; need to confirm exact request/response shape with a test call |
-| Twi placeholder text | **Needs native review** | "Kyere me wo yare ho..." needs validation by a Twi speaker |
+| OpenAI API key | **Available** | Already configured in `.env` as `OPENAI_API_KEY` |
+| Twi placeholder text | **Needs native review** | "Kyerɛ me wo yare ho..." needs validation by a Twi speaker |
 
 ## Risk Analysis & Mitigation
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|-----------|--------|------------|
-| GhanaNLP Khaya translation quality is poor for medical terms | Medium | High | Test with 10+ real Twi symptom descriptions before shipping. If quality is unacceptable, the MVP has validated that Khaya is not production-viable — that's a valid outcome. |
-| GhanaNLP API latency is too high (>3s) | Medium | Medium | Set 10s timeout. Monitor latency. If consistently slow, consider caching common phrases or evaluating alternative providers. |
-| GhanaNLP API goes down | Low | High | Return clear error to patient. No fallback to raw Twi (Claude would produce unreliable results). Log failures for monitoring. |
-| Patient types English with Twi selected | Medium | Low | For MVP, accept this limitation. Khaya may pass English through or lightly mangle it. Future: add client-side language detection. |
-| Mixed Twi/English input (medical terms in English) | High | Medium | Test how Khaya handles mixed input. Medical terms like "malaria", "paracetamol" are commonly used in Twi conversation and may pass through correctly. |
-| PHI sent to third-party API | N/A | High | Evaluate GhanaNLP's data handling policy. Ensure HTTPS. For MVP/internal testing this is acceptable; for production, a data processing agreement is needed. |
+| gpt-4o-mini translation quality is poor for medical Twi | Medium | High | Test with 10+ real Twi symptom descriptions before shipping. Can swap to gpt-4o (one-line change) or GhanaNLP Khaya if quality is insufficient. |
+| OpenAI API latency adds too much to time-to-first-token | Low | Medium | gpt-4o-mini is fast (~1s). Monitor latency. The translation happens before Claude streaming, so total latency = translation + Claude. |
+| OpenAI API goes down | Low | High | Return clear error to patient. No fallback to raw Twi (Claude would produce unreliable results). |
+| Patient types English with Twi selected | Medium | Low | gpt-4o-mini handles this well — system prompt says "preserve English portions". LLM approach is stronger here than dedicated NMT. |
+| Mixed Twi/English input (medical terms in English) | High | Low | Key advantage of LLM approach — gpt-4o-mini handles code-switching naturally. Medical terms like "malaria", "paracetamol" commonly used in Twi conversation will pass through. |
+| PHI sent to OpenAI API | N/A | High | OpenAI already processes PHI via the existing Claude pipeline (findings extraction uses OpenAI embeddings). Same data handling applies. |
 | Original Twi text is lost (no audit trail) | N/A | Medium | Accepted for MVP. Future: add `original_content` or `language` column to messages table. |
 
 ## Resource Requirements
 
-- **API access:** GhanaNLP Khaya developer account + API key
+- **API access:** Existing OpenAI API key (already in `.env`)
 - **Twi language consultant:** Native speaker to validate placeholder text and test translation quality
 - **Testing:** 10+ Twi symptom descriptions for manual quality evaluation
 
@@ -383,15 +355,14 @@ This MVP is Phase 1 of a multilingual roadmap:
 
 1. **Phase 1 (this plan):** Twi input → English translation, English response
 2. **Phase 2:** Translate Claude's English response back to Twi (bidirectional)
-3. **Phase 3:** Add more Ghanaian languages (Akan, Ewe, Ga, Dagbani) — GhanaNLP Khaya supports all 5
+3. **Phase 3:** Add more Ghanaian languages (Ewe, Ga, Dagbani) — gpt-4o-mini supports many African languages; GhanaNLP Khaya is an alternative for dedicated NMT
 4. **Phase 4:** Database schema changes — store language, original text, translated text per message
 5. **Phase 5:** UI i18n — translate buttons, labels, error messages
 6. **Phase 6:** Translation quality monitoring — flag low-confidence translations for human review
 
 ## Documentation Plan
 
-- [ ] Update `.env.example` with `GHANANLP_API_KEY` placeholder
-- [ ] Add inline code comments in `translate.ts` documenting the GhanaNLP API contract
+- [x] Add inline code comments in `translate.ts` documenting the OpenAI translation approach
 
 ## References & Research
 
@@ -409,8 +380,11 @@ This MVP is Phase 1 of a multilingual roadmap:
 
 ### External References
 
-- GhanaNLP Khaya API: `https://translation.ghananlp.org/`
-- GhanaNLP developer portal: `https://translation.ghananlp.org/` (sign up for API key)
+- OpenAI API: `https://platform.openai.com/` (gpt-4o-mini for translation)
+- IrokoBench (African language LLM benchmark): `https://arxiv.org/html/2406.03368v1`
+- AfroBench (LLMs on African languages): `https://arxiv.org/abs/2311.07978`
+- GhanaNLP Khaya API (alternative): `https://translation.ghananlp.org/`
+- Google Cloud Translation (alternative): `https://cloud.google.com/translate`
 
 ### ERD — No Database Changes for MVP
 
