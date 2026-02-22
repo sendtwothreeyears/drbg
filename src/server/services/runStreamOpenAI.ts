@@ -19,15 +19,15 @@ import { getProfileByConversationQuery } from "../db/operations/profiles";
 import { randomUUID } from "crypto";
 
 function getSystemPrompt(language: string): string {
-  if (language === "en") return CLINICAL_INTERVIEW;
-
   const langName = LANGUAGE_NAMES[language] || language;
+  if (language === "en") return CLINICAL_INTERVIEW(langName);
+
   const languageInstruction =
     `\n\nIMPORTANT: Conduct this entire clinical interview in ${langName}. ` +
     `The patient speaks ${langName}. Respond in ${langName}. ` +
     `If the patient uses English medical terms, acknowledge them naturally — this is normal code-switching.`;
 
-  return CLINICAL_INTERVIEW + languageInstruction;
+  return CLINICAL_INTERVIEW(langName) + languageInstruction;
 }
 
 // OpenAI-native streaming — parallel to runStream (Anthropic) with same callback interface
@@ -206,6 +206,25 @@ export async function runStreamOpenAI(
 
       // Notify client of each tool call
       for (const tc of toolCalls) {
+        // OpenAI often omits text when calling tools — inject a warm message fallback
+        if (tc.name === "collect_demographics" && !fullText.trim()) {
+          const fallbackEn =
+            "Thank you for sharing those details. To give you the most accurate and tailored advice, I need a couple of quick details — your age and biological sex. This information is private and secure.";
+
+          if (language !== "en") {
+            const translated = await translateText(fallbackEn, "en", language, 8000);
+            onText(translated);
+            fullText = translated;
+            originalContent = translated;
+            originalLanguage = language;
+            englishContent = fallbackEn;
+          } else {
+            onText(fallbackEn);
+            fullText = fallbackEn;
+            englishContent = fallbackEn;
+          }
+        }
+
         onToolUse(tc);
       }
     } else {
