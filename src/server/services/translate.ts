@@ -50,7 +50,7 @@ export async function translateText(
       { role: "user", content: text },
     ],
     temperature: 0,
-    max_tokens: 1024,
+    max_tokens: 4096,
   });
 
   const translated = response.choices[0]?.message?.content?.trim();

@@ -61,7 +61,9 @@ class Conversations {
 
     let toolName: string | undefined;
     if (!profile) {
-      toolName = "collect_demographics";
+      // Don't force a single tool — let AI acknowledge the patient first,
+      // then call collect_demographics naturally per system prompt instructions.
+      toolName = undefined;
     } else if (diagnoses.length === 0) {
       toolName = "generate_differentials";
     }

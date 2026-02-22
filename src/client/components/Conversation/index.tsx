@@ -376,30 +376,32 @@ const Conversation = () => {
               {error && (
                 <div className="font-fakt text-red-600 text-sm px-1 mb-2">{error}</div>
               )}
-              <label className="flex items-start gap-2 px-1 mb-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={tosAccepted}
-                  onChange={(e) => {
-                    setTosAccepted(e.target.checked);
-                    if (e.target.checked) {
-                      sessionStorage.setItem(`boafo-tos-${conversationId}`, "true");
-                    } else {
-                      sessionStorage.removeItem(`boafo-tos-${conversationId}`);
-                    }
-                  }}
-                  className="mt-1 shrink-0"
-                />
-                <span className="font-fakt text-xs text-gray-500">
-                  <Trans
-                    i18nKey="tos.consent"
-                    components={{
-                      tosLink: <a href="https://kasamd.com/terms" target="_blank" rel="noopener noreferrer" className="underline" />,
-                      emailLink: <a href="mailto:support@kasamd.com" className="underline" />,
+              {!tosAccepted && (
+                <label className="flex items-start gap-2 px-1 mb-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={tosAccepted}
+                    onChange={(e) => {
+                      setTosAccepted(e.target.checked);
+                      if (e.target.checked) {
+                        sessionStorage.setItem(`boafo-tos-${conversationId}`, "true");
+                      } else {
+                        sessionStorage.removeItem(`boafo-tos-${conversationId}`);
+                      }
                     }}
+                    className="mt-1 shrink-0"
                   />
-                </span>
-              </label>
+                  <span className="font-fakt text-xs text-gray-500">
+                    <Trans
+                      i18nKey="tos.consent"
+                      components={{
+                        tosLink: <a href="https://kasamd.com/terms" target="_blank" rel="noopener noreferrer" className="underline" />,
+                        emailLink: <a href="mailto:support@kasamd.com" className="underline" />,
+                      }}
+                    />
+                  </span>
+                </label>
+              )}
               <TextArea
                 ref={textAreaRef}
                 value={message}

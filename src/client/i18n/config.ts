@@ -9,7 +9,7 @@ i18n.use(initReactI18next).init({
     en: { translation: en },
     ak: { translation: ak },
   },
-  lng: "en",
+  lng: (typeof sessionStorage !== "undefined" && sessionStorage.getItem("boafo-language")) || "en",
   fallbackLng: "en",
   interpolation: {
     escapeValue: true,

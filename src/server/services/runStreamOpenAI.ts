@@ -15,6 +15,7 @@ import {
 import { searchGuidelines } from "./searchGuidelines";
 import { generateAssessment } from "./generateAssessment";
 import { getFindingsByConversationQuery } from "../db/operations/findings";
+import { getProfileByConversationQuery } from "../db/operations/profiles";
 import { randomUUID } from "crypto";
 
 function getSystemPrompt(language: string): string {
@@ -62,14 +63,19 @@ export async function runStreamOpenAI(
 
   // Get language-aware system prompt + select tool if specified
   const systemPrompt = getSystemPrompt(language);
-  const tool = toolName ? openaiTools[toolName] : undefined;
+  const allTools = Object.values(openaiTools);
+  const tools = toolName
+    ? [openaiTools[toolName]]
+    : allTools.length > 0
+      ? allTools
+      : undefined;
 
   try {
     // Initialize OpenAI streaming
     const stream = await createOpenAIChatStream(
       messages,
       systemPrompt,
-      tool ? [tool] : undefined,
+      tools,
     );
 
     // Defined ONCE before streaming
@@ -218,31 +224,37 @@ export async function runStreamOpenAI(
 
     // Handle differential diagnoses — persist and kick off RAG search
     if (differentialsCall) {
-      const { differentials } = differentialsCall.input as {
-        differentials: { condition: string; confidence: string }[];
-      };
-      await createDiagnosesMutation(conversationId, differentials);
-      await markConversationCompletedMutation(conversationId);
+      // Safety guard: don't generate differentials without patient demographics
+      const profile = await getProfileByConversationQuery(conversationId);
+      if (!profile) {
+        console.warn("[runStreamOpenAI] AI called generate_differentials without demographics — skipping");
+      } else {
+        const { differentials } = differentialsCall.input as {
+          differentials: { condition: string; confidence: string }[];
+        };
+        await createDiagnosesMutation(conversationId, differentials);
+        await markConversationCompletedMutation(conversationId);
 
-      onAssessmentLoading();
+        onAssessmentLoading();
 
-      const findings = await getFindingsByConversationQuery(conversationId);
+        const findings = await getFindingsByConversationQuery(conversationId);
 
-      const guidelineResults = await Promise.all(
-        differentials.map((d) => searchGuidelines(d.condition, findings)),
-      );
+        const guidelineResults = await Promise.all(
+          differentials.map((d) => searchGuidelines(d.condition, findings)),
+        );
 
-      const { text, translatedText, sources } = await generateAssessment(
-        findings,
-        differentials,
-        guidelineResults,
-        language,
-      );
-      await updateAssessmentMutation(conversationId, text, sources, translatedText);
+        const { text, translatedText, sources } = await generateAssessment(
+          findings,
+          differentials,
+          guidelineResults,
+          language,
+        );
+        await updateAssessmentMutation(conversationId, text, sources, translatedText);
 
-      meta.diagnoses = true;
-      meta.assessment = text;
-      meta.assessmentTranslated = translatedText;
+        meta.diagnoses = true;
+        meta.assessment = text;
+        meta.assessmentTranslated = translatedText;
+      }
     }
 
     // Extract clinical findings before signaling done (always uses English content)
