@@ -221,7 +221,6 @@ export async function runStreamOpenAI(
       onAssessmentLoading();
 
       const findings = await getFindingsByConversationQuery(conversationId);
-      console.log("findings", findings);
 
       const guidelineResults = await Promise.all(
         differentials.map((d) => searchGuidelines(d.condition, findings)),

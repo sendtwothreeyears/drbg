@@ -79,9 +79,16 @@ class Conversations {
         send({ done: true, ...meta });
         res.end();
       },
-      // OnError
+      // OnError — only forward known user-facing messages; generic fallback for unexpected errors
       (err) => {
-        send({ error: err.message || "Stream failed" });
+        const SAFE_MESSAGES = new Set([
+          "Translation failed. Your response could not be saved. Please resend your message.",
+        ]);
+        const message =
+          err instanceof Error && SAFE_MESSAGES.has(err.message)
+            ? err.message
+            : "Stream failed";
+        send({ error: message });
         res.end();
       },
       toolName,
