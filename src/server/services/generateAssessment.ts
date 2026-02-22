@@ -85,6 +85,7 @@ Base your recommendations on the provided guideline excerpts. Do not fabricate g
   }
 
   const confidenceRank: Record<string, number> = { high: 0, moderate: 1, low: 2 };
+
   return {
     text,
     sources: sources.sort(

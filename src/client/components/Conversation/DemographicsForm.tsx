@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 type DemographicsFormProps = {
   onSubmit: (age: number, biologicalSex: string) => void;
@@ -6,8 +7,14 @@ type DemographicsFormProps = {
 };
 
 const DemographicsForm = ({ onSubmit, disabled }: DemographicsFormProps) => {
+  const { t } = useTranslation();
   const [age, setAge] = useState<string>("");
   const [sex, setSex] = useState<string>("");
+  const ageRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    ageRef.current?.focus();
+  }, []);
 
   const canSubmit = age && parseInt(age) > 0 && sex && !disabled;
 
@@ -24,11 +31,12 @@ const DemographicsForm = ({ onSubmit, disabled }: DemographicsFormProps) => {
             type="number"
             min="18"
             max="120"
+            ref={ageRef}
             value={age}
             onChange={(e) => setAge(e.target.value)}
             disabled={disabled}
             className="flex-1 px-4 py-3 bg-white border border-gray-200 rounded-xl font-fakt text-base focus:outline-none focus:ring-2 focus:ring-slate-400"
-            placeholder="Age (18+)"
+            placeholder={t("demographics.agePlaceholder")}
           />
           <div className="flex bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
             <button
@@ -41,7 +49,7 @@ const DemographicsForm = ({ onSubmit, disabled }: DemographicsFormProps) => {
                   : "text-gray-900 hover:bg-gray-200"
               }`}
             >
-              Female
+              {t("demographics.female")}
             </button>
             <button
               type="button"
@@ -53,7 +61,7 @@ const DemographicsForm = ({ onSubmit, disabled }: DemographicsFormProps) => {
                   : "text-gray-900 hover:bg-gray-200"
               }`}
             >
-              Male
+              {t("demographics.male")}
             </button>
           </div>
         </div>
@@ -64,7 +72,7 @@ const DemographicsForm = ({ onSubmit, disabled }: DemographicsFormProps) => {
             canSubmit ? "bg-indigo-400 hover:bg-indigo-500" : "bg-gray-300"
           }`}
         >
-          Submit
+          {t("demographics.submit")}
         </button>
       </div>
     </div>

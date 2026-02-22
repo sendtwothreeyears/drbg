@@ -4,4 +4,6 @@ export type Message = {
   content: string;
   role: "user" | "assistant";
   created_at: string;
+  original_content: string | null;
+  original_language: string | null;
 };

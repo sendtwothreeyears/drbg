@@ -16,7 +16,8 @@
     "nice:parse": "tsx src/server/scripts/nice/parse.ts",
     "nice:embed": "tsx src/server/scripts/nice/embed.ts",
     "ghana:download": "tsx src/server/scripts/ghana/download.ts",
-    "embed:all": "npm run who:embed && npm run nice:embed"
+    "embed:all": "npm run who:embed && npm run nice:embed",
+    "db:migrate:001": "tsx src/server/scripts/migrate-001-add-language-support.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
@@ -27,10 +28,14 @@
     "dotenv": "^17.2.4",
     "express": "^5.1.0",
     "fast-xml-parser": "^5.3.5",
+    "i18next": "^25.8.13",
+    "marked": "^17.0.3",
     "openai": "^6.21.0",
     "pg": "^8.18.0",
+    "puppeteer": "^24.37.5",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-i18next": "^16.5.4",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.13.0",
     "tailwindcss": "^4.1.18",

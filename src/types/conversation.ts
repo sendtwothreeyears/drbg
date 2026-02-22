@@ -6,4 +6,5 @@ export type Conversation = {
   assessment_sources: { source: string; section: string; similarity: number }[] | null;
   created_at: string;
   authorid: string | null;
+  language: string;
 };

@@ -10,9 +10,11 @@ CREATE TABLE IF NOT EXISTS conversations  (
 	title TEXT,
 	completed BOOLEAN DEFAULT FALSE,
 	assessment TEXT,
+	assessment_translated TEXT,
 	assessment_sources JSON,
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	authorid TEXT,
+	language TEXT NOT NULL DEFAULT 'en',
 	FOREIGN KEY(authorid) REFERENCES users(userid)
 );
 
@@ -20,6 +22,8 @@ CREATE TABLE IF NOT EXISTS messages (
 	messageid TEXT PRIMARY KEY,
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	content TEXT,
+	original_content TEXT,
+	original_language TEXT,
 	role TEXT,
 	conversationid TEXT,
 	FOREIGN KEY(conversationid) REFERENCES conversations(conversationid)

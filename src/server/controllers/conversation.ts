@@ -18,7 +18,9 @@ import {
 
 import { getDiagnosesByConversationQuery } from "../db/operations/diagnoses";
 
-import { runStream } from "../services/runStream";
+import { runStreamOpenAI } from "../services/runStreamOpenAI";
+import { translateText } from "../services/translate";
+import { generatePDF } from "../services/generatePDF";
 import { StreamEvent } from "../../types";
 
 class Conversations {
@@ -41,6 +43,9 @@ class Conversations {
     // We don't wait until data is available, we make sure the stream is active first and then actively write to it.
     res.flushHeaders();
 
+    // Disable EventSource auto-reconnect to prevent duplicate streams
+    res.write("retry: 86400000\n\n");
+
     let closed = false;
     // when browser tab closed, or client's eventSource.close() called
     req.on("close", () => {
@@ -57,12 +62,14 @@ class Conversations {
 
     let toolName: string | undefined;
     if (!profile) {
-      toolName = "collect_demographics";
+      // Don't force a single tool — let AI acknowledge the patient first,
+      // then call collect_demographics naturally per system prompt instructions.
+      toolName = undefined;
     } else if (diagnoses.length === 0) {
       toolName = "generate_differentials";
     }
 
-    await runStream(
+    await runStreamOpenAI(
       conversationId,
       // onText -> sends chunked messages back to client
       (text) => send({ text }),
@@ -75,9 +82,16 @@ class Conversations {
         send({ done: true, ...meta });
         res.end();
       },
-      // OnError
-      () => {
-        send({ error: "Stream failed" });
+      // OnError — only forward known user-facing messages; generic fallback for unexpected errors
+      (err) => {
+        const SAFE_MESSAGES = new Set([
+          "Translation failed. Your response could not be saved. Please resend your message.",
+        ]);
+        const message =
+          err instanceof Error && SAFE_MESSAGES.has(err.message)
+            ? err.message
+            : "Stream failed";
+        send({ error: message });
         res.end();
       },
       toolName,
@@ -85,14 +99,47 @@ class Conversations {
   }
 
   async createConversation(req: Request, res: Response) {
-    const { message } = req.body;
-    const conversationId = await createConversationMutation();
+    const { message, language = "en" } = req.body;
+
+    if (typeof message !== "string" || !message.trim()) {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
+    let englishMessage: string;
+    try {
+      englishMessage = await translateText(message, language, "en");
+      if (language !== "en") {
+        console.log(`[translate] lang=${language} original=${message.length}chars translated=${englishMessage.length}chars`);
+      }
+    } catch (error) {
+      console.error("Translation failed:", error);
+      return res.status(502).json({
+        error: "translation_failed",
+        message: "Unable to translate your message. Please try again.",
+      });
+    }
+
+    const GREETINGS: Record<string, string> = {
+      en: "I'll help you work through your symptoms. Let's take a closer look.",
+      ak: "Mɛboa wo na yɛahwɛ wo yare no mu. Ma yɛnhwɛ mu yie.",
+    };
+
+    const greeting = GREETINGS[language] || GREETINGS.en;
+    const conversationId = await createConversationMutation(language);
     await createMessageMutation(
       conversationId,
       "assistant",
-      "I'll help you work through your symptoms. Let's take a closer look.",
+      GREETINGS.en,
+      language !== "en" ? greeting : null,
+      language !== "en" ? language : null,
     );
-    await createMessageMutation(conversationId, "user", message);
+    await createMessageMutation(
+      conversationId,
+      "user",
+      englishMessage,
+      language !== "en" ? message : null,
+      language !== "en" ? language : null,
+    );
     res.json({ conversationId });
   }
 
@@ -101,9 +148,32 @@ class Conversations {
     res: Response,
   ) {
     const { conversationId } = req.params;
-    const { message } = req.body;
-    await createMessageMutation(conversationId, "user", message);
-    res.json({ success: true });
+    const { message, language = "en" } = req.body;
+
+    if (typeof message !== "string" || !message.trim()) {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
+    try {
+      const englishMessage = await translateText(message, language, "en");
+      if (language !== "en") {
+        console.log(`[translate] lang=${language} original=${message.length}chars translated=${englishMessage.length}chars`);
+      }
+      await createMessageMutation(
+        conversationId,
+        "user",
+        englishMessage,
+        language !== "en" ? message : null,
+        language !== "en" ? language : null,
+      );
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Translation failed:", error);
+      return res.status(502).json({
+        error: "translation_failed",
+        message: "Unable to translate your message. Please try again.",
+      });
+    }
   }
 
   async createDemographics(
@@ -112,6 +182,16 @@ class Conversations {
   ) {
     const { conversationId } = req.params;
     const { toolUseId, age, biologicalSex } = req.body;
+
+    if (typeof age !== "number" || !Number.isInteger(age) || age < 0 || age > 150) {
+      return res.status(400).json({ error: "Invalid age" });
+    }
+    if (!["male", "female"].includes(biologicalSex)) {
+      return res.status(400).json({ error: "Invalid biological sex" });
+    }
+    if (typeof toolUseId !== "string" || !toolUseId) {
+      return res.status(400).json({ error: "Invalid tool use ID" });
+    }
 
     await createProfileMutation(conversationId, age, biologicalSex);
 
@@ -145,6 +225,26 @@ class Conversations {
     res.json({ diagnoses });
   }
 
+  async exportPDF(req: Request<{ conversationId: string }>, res: Response) {
+    const { conversationId } = req.params;
+
+    try {
+      const conversation = await getConversationQuery(conversationId);
+      if (!conversation?.assessment) {
+        return res.status(404).json({ error: "No assessment found" });
+      }
+
+      const pdfBuffer = await generatePDF(conversation.assessment);
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", 'attachment; filename="boafo-assessment.pdf"');
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("[exportPDF] error:", error);
+      res.status(500).json({ error: "PDF generation failed" });
+    }
+  }
+
   async getConversationAndMessages(
     req: Request<{ conversationId: string }>,
     res: Response,
@@ -158,6 +258,7 @@ class Conversations {
       completed: conversation?.completed,
       assessment: conversation?.assessment,
       assessmentSources: conversation?.assessment_sources,
+      language: conversation?.language || "en",
       messages,
     });
   }

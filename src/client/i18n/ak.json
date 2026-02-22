@@ -1,0 +1,40 @@
+{
+  "home": {
+    "greeting": "Me din de Boafo",
+    "subtitle": "Mɛboa wo na woahu wo yare ho nsɛm. Mɛbisa wo nsɛmmisa kakra.",
+    "prompt": "Yare bɛn na wowɔ?",
+    "placeholder": "Kyerɛ me wo yare ho...",
+    "getStarted": "Hyɛ ase",
+    "error": {
+      "translationFailed": "Nkyerɛase no anyɛ yiye. Yɛsrɛ wo bɔ mmɔden bio.",
+      "generic": "Biribi kɔɔ basaa. Yɛsrɛ wo bɔ mmɔden bio."
+    }
+  },
+  "conversation": {
+    "consultStarted": "Ndwenendwene hyɛɛ aseɛ:",
+    "today": "Ɛnnɛ",
+    "yesterday": "Ɛnnora",
+    "emergency": "Sɛ ɛyɛ ɛhia a, frɛ 112 anaa wo man mu emergency nɔma.",
+    "summaryTitle": "AI Ndwenendwene Nsɛm",
+    "assessmentTitle": "Nhwɛso ne Nhyehyɛe",
+    "assessmentCTA": "Wubɛtumi a-download saa nhwehwɛmu yi sɛ PDF denam download icon a ɛwɔ soro no so. Sɛ wopɛ sɛ wo de email brɛ wo dɔkota a, yɛsrɛ wo fa PDF no ka email no ho.",
+    "downloadPDF": "Download sɛ PDF",
+    "emailAssessment": "De email brɛ nhwehwɛmu",
+    "emailSubject": "Boafo AI Nhwehwɛmu",
+    "emailBody": "Yɛsrɛ wo hwɛ Boafo AI nhwehwɛmu a wɔayɛ no.\n\nNkyerɛkyerɛmu: Yɛsrɛ wo download PDF no kora na fa ka saa email yi ho ansa na woabrɛ.",
+    "loadingTitle": "Ɛrekyerɛw Wo AI Ndwenendwene Nsɛm",
+    "loadingSubtitle": "Ɛrehwɛ yaresa ho nsɛm foforo...",
+    "placeholder": "Kyerɛ me wo yare ho...",
+    "pdfError": "PDF download no yɛ. Yɛsrɛ wo bɔ mmɔden bio.",
+    "streamError": "Mmuaeɛ no antumi amma. Yɛsrɛ wo bɔ mmɔden bio."
+  },
+  "demographics": {
+    "agePlaceholder": "Mfeɛ (18+)",
+    "female": "Ɔbaa",
+    "male": "Ɔbarima",
+    "submit": "Mena so"
+  },
+  "tos": {
+    "consent": "Mepene <tosLink>KasaMD Nhyehyɛe</tosLink> so na mɛka Boafo nsɛm nyinaa akyerɛ dɔkota. Boafo yɛ AI adwumayɛ adwinnadeɛ, ɛnyɛ dɔkota a wɔde tumi amaano, na ɛnyɛ yaremuayie anaa yaremuayie fotoɔ. Nsɛmmisa anaa nkwagye: <emailLink>support@kasamd.com</emailLink>"
+  }
+}
