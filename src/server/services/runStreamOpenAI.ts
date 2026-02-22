@@ -116,7 +116,7 @@ export async function runStreamOpenAI(
       let translationError: unknown;
       for (let attempt = 1; attempt <= 2; attempt++) {
         try {
-          englishContent = await translateText(fullText, language, "en");
+          englishContent = await translateText(fullText, language, "en", 8000);
           translationError = null;
           break;
         } catch (err) {
@@ -159,7 +159,13 @@ export async function runStreamOpenAI(
 
     for (const fc of functionCalls) {
       if (!fc?.name) continue;
-      const input = JSON.parse(fc.arguments);
+      let input;
+      try {
+        input = JSON.parse(fc.arguments);
+      } catch {
+        console.error(`[runStreamOpenAI] Failed to parse tool arguments for ${fc.name}`);
+        continue;
+      }
       const call: ToolCall = { id: randomUUID(), name: fc.name, input };
 
       if (fc.name === "generate_differentials") {

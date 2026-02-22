@@ -98,6 +98,10 @@ class Conversations {
   async createConversation(req: Request, res: Response) {
     const { message, language = "en" } = req.body;
 
+    if (typeof message !== "string" || !message.trim()) {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
     let englishMessage: string;
     try {
       englishMessage = await translateText(message, language, "en");
@@ -143,6 +147,10 @@ class Conversations {
     const { conversationId } = req.params;
     const { message, language = "en" } = req.body;
 
+    if (typeof message !== "string" || !message.trim()) {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
     try {
       const englishMessage = await translateText(message, language, "en");
       if (language !== "en") {
@@ -171,6 +179,16 @@ class Conversations {
   ) {
     const { conversationId } = req.params;
     const { toolUseId, age, biologicalSex } = req.body;
+
+    if (typeof age !== "number" || !Number.isInteger(age) || age < 0 || age > 150) {
+      return res.status(400).json({ error: "Invalid age" });
+    }
+    if (!["male", "female"].includes(biologicalSex)) {
+      return res.status(400).json({ error: "Invalid biological sex" });
+    }
+    if (typeof toolUseId !== "string" || !toolUseId) {
+      return res.status(400).json({ error: "Invalid tool use ID" });
+    }
 
     await createProfileMutation(conversationId, age, biologicalSex);
 

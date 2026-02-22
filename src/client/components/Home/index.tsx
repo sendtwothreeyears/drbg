@@ -55,7 +55,9 @@ const Home = () => {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
-  const [language, setLanguage] = useState("en");
+  const [language, setLanguage] = useState(() =>
+    sessionStorage.getItem("boafo-language") || "en"
+  );
   const [error, setError] = useState<string | null>(null);
 
   const onLanguageChange = (lang: string) => {

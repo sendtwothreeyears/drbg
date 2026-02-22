@@ -9,6 +9,11 @@ const app = express();
 app.use(express.json());
 app.use("/api", conversationRouter);
 
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error("[server]", err);
+  res.status(500).json({ error: "Internal server error" });
+});
+
 const port = Number(process.env.PORT ?? 3000);
 
 const server = ViteExpress.listen(app, port, () =>

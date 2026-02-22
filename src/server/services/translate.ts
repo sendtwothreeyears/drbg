@@ -30,6 +30,7 @@ export async function translateText(
   text: string,
   from: string,
   to: string,
+  maxLength: number = MAX_INPUT_LENGTH,
 ): Promise<string> {
   if (from === to) return text;
   if (!text.trim()) return text;
@@ -38,8 +39,8 @@ export async function translateText(
     throw new Error(`Unsupported language pair: ${from} → ${to}`);
   }
 
-  if (text.length > MAX_INPUT_LENGTH) {
-    throw new Error(`Input exceeds maximum length of ${MAX_INPUT_LENGTH} characters`);
+  if (text.length > maxLength) {
+    throw new Error(`Input exceeds maximum length of ${maxLength} characters`);
   }
 
   const response = await client.chat.completions.create({
