@@ -1,6 +1,7 @@
 // GLOBAL IMPORTS
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
+import { useTranslation, Trans } from "react-i18next";
 import axios from "axios";
 
 // SERVICES LAYER
@@ -26,6 +27,7 @@ import {
 
 const Conversation = () => {
   const { conversationId } = useParams();
+  const { t, i18n } = useTranslation();
   const [messages, setMessages] = useState<any[]>([]);
   const [message, setMessage] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -35,9 +37,13 @@ const Conversation = () => {
   const [completed, setCompleted] = useState(false);
   const [assessmentLoading, setAssessmentLoading] = useState(false);
   const [assessment, setAssessment] = useState<string | null>(null);
+  const [assessmentTranslated, setAssessmentTranslated] = useState<string | null>(null);
   const [createdAt, setCreatedAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [language, setLanguage] = useState<string | null>(null);
+  const [tosAccepted, setTosAccepted] = useState(() => {
+    return sessionStorage.getItem(`boafo-tos-${conversationId}`) === "true";
+  });
   const textAreaRef = useRef<TextAreaHandle>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const findingsRef = useRef<FindingsPanelHandle>(null);
@@ -82,6 +88,7 @@ const Conversation = () => {
         if (meta?.diagnoses) {
           setCompleted(true);
           setAssessment(meta.assessment);
+          setAssessmentTranslated(meta.assessmentTranslated || null);
           setShowDiagnoses(true);
         } else {
           textAreaRef.current?.focus();
@@ -98,7 +105,7 @@ const Conversation = () => {
           }
           return prev;
         });
-        setError(errorMsg || "The response could not be completed. Please try again.");
+        setError(errorMsg || t("conversation.streamError"));
       },
     );
   };
@@ -118,7 +125,7 @@ const Conversation = () => {
   };
 
   const handleSend = async () => {
-    if (!message.trim() || streaming) return;
+    if (!message.trim() || streaming || !tosAccepted) return;
     const text = message.trim();
     setMessage("");
     setError(null);
@@ -135,9 +142,9 @@ const Conversation = () => {
       setMessages((prev) => prev.slice(0, -1));
       setMessage(text);
       if (err.response?.data?.error === "translation_failed") {
-        setError("Unable to translate your message. Please try again or switch to English.");
+        setError(t("home.error.translationFailed"));
       } else {
-        setError("Something went wrong. Please try again.");
+        setError(t("home.error.generic"));
       }
     }
   };
@@ -177,10 +184,12 @@ const Conversation = () => {
       const { data } = await axios.get(`/api/conversation/${conversationId}`);
       setMessages(data.messages);
       setLanguage(data.language || "en");
+      i18n.changeLanguage(data.language || "en");
       setCreatedAt(data.createdAt);
       if (data.completed) {
         setCompleted(true);
         setAssessment(data.assessment);
+        setAssessmentTranslated(data.assessmentTranslated || null);
         setShowDiagnoses(true);
       } else {
         textAreaRef.current?.focus();
@@ -295,7 +304,7 @@ const Conversation = () => {
               </div>
             </div>
             <div className="font-fakt font-semibold text-main text-base my-8">
-              If this is an emergency, call 911 or your local emergency number.
+              {t("conversation.emergency")}
             </div>
             <hr className="mb-4 border-outline" />
             {renderMessages()}
@@ -315,23 +324,37 @@ const Conversation = () => {
                   />
                 </div>
                 <h2 className="font-ddn font-semibold text-3xl mb-1">
-                  AI Consult Summary
+                  {t("conversation.summaryTitle")}
                 </h2>
                 <p className="font-fakt text-gray-500 text-sm mb-4">
                   {createdAt && formatSummaryDate(createdAt)}
                 </p>
                 {assessmentLoading && !assessment && (
                   <LoadingPanel
-                    title="Writing Your AI Consult Summary"
-                    subtitle="Reviewing the latest medical data..."
+                    title={t("conversation.loadingTitle")}
+                    subtitle={t("conversation.loadingSubtitle")}
                   />
                 )}
-                {assessment && (
-                  <Accordion title="Assessment & Plan">
+                {assessment && !assessmentTranslated && (
+                  <Accordion title={t("conversation.assessmentTitle")}>
                     <div className="assessment-markdown">
                       <ReactMarkdown>{assessment}</ReactMarkdown>
                     </div>
                   </Accordion>
+                )}
+                {assessment && assessmentTranslated && (
+                  <>
+                    <Accordion title={t("conversation.assessmentTitle")} defaultOpen={true}>
+                      <div className="assessment-markdown">
+                        <ReactMarkdown>{assessmentTranslated}</ReactMarkdown>
+                      </div>
+                    </Accordion>
+                    <Accordion title={t("conversation.assessmentTitleEnglish")} defaultOpen={false}>
+                      <div className="assessment-markdown">
+                        <ReactMarkdown>{assessment}</ReactMarkdown>
+                      </div>
+                    </Accordion>
+                  </>
                 )}
               </div>
             )}
@@ -353,18 +376,43 @@ const Conversation = () => {
               {error && (
                 <div className="font-fakt text-red-600 text-sm px-1 mb-2">{error}</div>
               )}
+              <label className="flex items-start gap-2 px-1 mb-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={tosAccepted}
+                  onChange={(e) => {
+                    setTosAccepted(e.target.checked);
+                    if (e.target.checked) {
+                      sessionStorage.setItem(`boafo-tos-${conversationId}`, "true");
+                    } else {
+                      sessionStorage.removeItem(`boafo-tos-${conversationId}`);
+                    }
+                  }}
+                  className="mt-1 shrink-0"
+                />
+                <span className="font-fakt text-xs text-gray-500">
+                  <Trans
+                    i18nKey="tos.consent"
+                    components={{
+                      tosLink: <a href="https://kasamd.com/terms" target="_blank" rel="noopener noreferrer" className="underline" />,
+                      emailLink: <a href="mailto:support@kasamd.com" className="underline" />,
+                    }}
+                  />
+                </span>
+              </label>
               <TextArea
                 ref={textAreaRef}
                 value={message}
                 onChange={setMessage}
                 onSubmit={handleSend}
-                placeholder={language === "ak" ? "Kyerɛ me wo yare ho..." : "Type your message..."}
+                placeholder={t("conversation.placeholder")}
+                disabled={streaming}
               />
               <div className="flex justify-end">
                 <button
                   onClick={handleSend}
-                  disabled={!message.trim() || streaming}
-                  className={`p-2 rounded-full text-white ${message.trim() && !streaming ? "bg-main" : "bg-gray-300"}`}
+                  disabled={!message.trim() || streaming || !tosAccepted}
+                  className={`p-2 rounded-full text-white ${message.trim() && !streaming && tosAccepted ? "bg-main" : "bg-gray-300"}`}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"

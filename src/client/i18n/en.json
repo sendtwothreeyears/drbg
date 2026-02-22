@@ -1,0 +1,35 @@
+{
+  "home": {
+    "greeting": "Hi, I'm Boafo",
+    "subtitle": "I'm here to help you understand your symptoms. I'll guide you through a few questions.",
+    "prompt": "What symptoms are you experiencing?",
+    "placeholder": "Describe your symptoms...",
+    "getStarted": "Get Started",
+    "error": {
+      "translationFailed": "Unable to translate your message. Please try again or switch to English.",
+      "generic": "Something went wrong. Please try again."
+    }
+  },
+  "conversation": {
+    "consultStarted": "Consult started:",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "emergency": "If this is an emergency, call 112 or your local emergency number.",
+    "summaryTitle": "AI Consult Summary",
+    "assessmentTitle": "Assessment & Plan",
+    "assessmentTitleEnglish": "Assessment & Plan (English)",
+    "loadingTitle": "Writing Your AI Consult Summary",
+    "loadingSubtitle": "Reviewing the latest medical data...",
+    "placeholder": "Type your message...",
+    "streamError": "The response could not be completed. Please try again."
+  },
+  "demographics": {
+    "agePlaceholder": "Age (18+)",
+    "female": "Female",
+    "male": "Male",
+    "submit": "Submit"
+  },
+  "tos": {
+    "consent": "I agree to the <tosLink>KasaMD Terms of Service</tosLink> and will discuss all Boafo output with a doctor. Boafo is an AI clinical tool, not a licensed doctor, and does not practice medicine or provide medical advice or care. Questions or complaints: <emailLink>support@kasamd.com</emailLink>"
+  }
+}

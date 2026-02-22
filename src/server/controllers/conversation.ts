@@ -216,6 +216,7 @@ class Conversations {
       createdAt: conversation?.created_at,
       completed: conversation?.completed,
       assessment: conversation?.assessment,
+      assessmentTranslated: conversation?.assessment_translated || null,
       assessmentSources: conversation?.assessment_sources,
       language: conversation?.language || "en",
       messages,

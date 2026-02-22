@@ -226,15 +226,17 @@ export async function runStreamOpenAI(
         differentials.map((d) => searchGuidelines(d.condition, findings)),
       );
 
-      const { text, sources } = await generateAssessment(
+      const { text, translatedText, sources } = await generateAssessment(
         findings,
         differentials,
         guidelineResults,
+        language,
       );
-      await updateAssessmentMutation(conversationId, text, sources);
+      await updateAssessmentMutation(conversationId, text, sources, translatedText);
 
       meta.diagnoses = true;
       meta.assessment = text;
+      meta.assessmentTranslated = translatedText;
     }
 
     // Extract clinical findings before signaling done (always uses English content)

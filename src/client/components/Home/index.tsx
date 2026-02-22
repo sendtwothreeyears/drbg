@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import TextArea, { TextAreaHandle } from "../../shared/TextArea";
 import Spinner from "../../shared/Spinner";
 import LanguageSelector from "../LanguageSelector";
@@ -14,15 +15,12 @@ type GetStartedProps = {
 
 const GetStarted = ({ onStartConversation, loading, language, onLanguageChange }: GetStartedProps) => {
   const [message, setMessage] = useState("");
+  const { t } = useTranslation();
   const textAreaRef = useRef<TextAreaHandle>(null);
 
   useEffect(() => {
     textAreaRef.current?.focus();
   }, []);
-
-  const placeholder = language === "ak"
-    ? "Kyerɛ me wo yare ho..."
-    : "Describe your symptoms...";
 
   return (
     <div className="bg-white p-2 rounded-lg shadow-sm border-gray-200">
@@ -34,7 +32,7 @@ const GetStarted = ({ onStartConversation, loading, language, onLanguageChange }
         value={message}
         onChange={setMessage}
         onSubmit={() => onStartConversation(message)}
-        placeholder={placeholder}
+        placeholder={t("home.placeholder")}
       />
       <div className="flex justify-end">
         {loading ? (
@@ -45,7 +43,7 @@ const GetStarted = ({ onStartConversation, loading, language, onLanguageChange }
             disabled={!message.trim()}
             className="bg-main py-2 px-4 rounded-sm text-white text-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Get Started
+            {t("home.getStarted")}
           </button>
         )}
       </div>
@@ -55,12 +53,14 @@ const GetStarted = ({ onStartConversation, loading, language, onLanguageChange }
 
 const Home = () => {
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [language, setLanguage] = useState("en");
   const [error, setError] = useState<string | null>(null);
 
   const onLanguageChange = (lang: string) => {
     setLanguage(lang);
+    i18n.changeLanguage(lang);
     sessionStorage.setItem("boafo-language", lang);
   };
 
@@ -72,9 +72,9 @@ const Home = () => {
       navigate(`/conversation/${data.conversationId}`);
     } catch (err: any) {
       if (err.response?.data?.error === "translation_failed") {
-        setError("Unable to translate your message. Please try again or switch to English.");
+        setError(t("home.error.translationFailed"));
       } else {
-        setError("Something went wrong. Please try again.");
+        setError(t("home.error.generic"));
       }
     } finally {
       setLoading(false);
@@ -101,7 +101,7 @@ const Home = () => {
               className="h-10"
             />
             <div className="font-ddn font-semibold text-4xl text-main mt-[5px]">
-              Hi, I'm{" "}
+              {t("home.greeting").split("Boafo")[0]}
               <span className="relative">
                 Boafo
                 <span className="absolute left-[5px] z-[-1] right-0 bottom-0 h-[5px] bg-highlight" />
@@ -109,11 +109,8 @@ const Home = () => {
             </div>
           </div>
           <div className="font-fakt text-gray-600 font-medium text-xl pt-2">
-            <div className="py-2">
-              I'm here to help you understand your symptoms. I'll guide you
-              through a few questions.
-            </div>
-            <div className="py-2">What symptoms are you experiencing?</div>
+            <div className="py-2">{t("home.subtitle")}</div>
+            <div className="py-2">{t("home.prompt")}</div>
           </div>
         </div>
         {/* Entry point for AI documenter */}
@@ -126,11 +123,6 @@ const Home = () => {
           />
           {error && (
             <div className="font-fakt text-red-600 text-sm text-center mt-2">{error}</div>
-          )}
-          {language === "ak" && (
-            <div className="font-fakt text-gray-400 text-sm text-center mt-2">
-              Your message will be translated to English for processing. Responses will be in English.
-            </div>
           )}
           <div className="font-fakt text-gray-400 text-sm text-center mt-2">
             This is a demo. Not a substitute for professional medical advice.

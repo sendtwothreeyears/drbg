@@ -1,3 +1,12 @@
+import i18n from "../i18n/config";
+
+const LOCALE_MAP: Record<string, string> = {
+  en: "en-US",
+  ak: "en-GH",
+};
+
+const getLocale = () => LOCALE_MAP[i18n.language] || "en-US";
+
 const getDisplayText = (content: string): string => {
   try {
     const blocks = JSON.parse(content);
@@ -16,25 +25,28 @@ const formatConsultDate = (timestamp: string): string => {
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
 
+  const locale = getLocale();
+
   let day: string;
   if (date.toDateString() === now.toDateString()) {
-    day = "Today";
+    day = i18n.t("conversation.today");
   } else if (date.toDateString() === yesterday.toDateString()) {
-    day = "Yesterday";
+    day = i18n.t("conversation.yesterday");
   } else {
-    day = date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+    day = date.toLocaleDateString(locale, { weekday: "long", month: "long", day: "numeric" });
   }
 
-  const time = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
-  return `Consult started: ${day}, ${time}`;
+  const time = date.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit", hour12: true });
+  return `${i18n.t("conversation.consultStarted")} ${day}, ${time}`;
 };
 
 const formatSummaryDate = (timestamp: string): string => {
   const date = new Date(timestamp);
-  const month = date.toLocaleDateString("en-US", { month: "short" });
+  const locale = getLocale();
+  const month = date.toLocaleDateString(locale, { month: "short" });
   const day = date.getDate();
   const year = date.getFullYear();
-  const time = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true }).toLowerCase();
+  const time = date.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit", hour12: true }).toLowerCase();
   return `${month} ${day}, ${year}, ${time}`;
 };
 

@@ -11,6 +11,7 @@ interface TextAreaProps {
   onSubmit?: () => void;
   placeholder?: string;
   rows?: number;
+  disabled?: boolean;
 }
 
 export interface TextAreaHandle {
@@ -18,7 +19,7 @@ export interface TextAreaHandle {
 }
 
 const TextArea = forwardRef<TextAreaHandle, TextAreaProps>(
-  ({ value, onChange, onSubmit, placeholder, rows }, forwardedRef) => {
+  ({ value, onChange, onSubmit, placeholder, rows, disabled }, forwardedRef) => {
     const ref = useRef<HTMLTextAreaElement>(null);
 
     useImperativeHandle(forwardedRef, () => ({
@@ -48,11 +49,12 @@ const TextArea = forwardRef<TextAreaHandle, TextAreaProps>(
     return (
       <textarea
         ref={ref}
-        className="w-full resize-none outline-none px-2 py-1 text-lg overflow-hidden"
+        className={`w-full resize-none outline-none px-2 py-1 text-lg overflow-hidden ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
         value={value}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
+        disabled={disabled}
         {...(rows !== undefined && { rows })}
       />
     );

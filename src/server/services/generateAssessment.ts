@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { Finding } from "../../types";
+import { translateText } from "./translate";
 
 const client = new Anthropic({
   apiKey: process.env["ANTHROPIC_API_KEY"],
@@ -15,6 +16,7 @@ type GuidelineChunk = {
 
 type AssessmentResult = {
   text: string;
+  translatedText: string | null;
   sources: { source: string; section: string; similarity: number; condition: string; confidence: string }[];
 };
 
@@ -22,6 +24,7 @@ const generateAssessment = async (
   findings: Finding[],
   diagnoses: { condition: string; confidence: string }[],
   guidelineResults: GuidelineChunk[][],
+  language: string = "en",
 ): Promise<AssessmentResult> => {
   // Build structured context for the prompt
   const findingsText = findings
@@ -85,8 +88,19 @@ Base your recommendations on the provided guideline excerpts. Do not fabricate g
   }
 
   const confidenceRank: Record<string, number> = { high: 0, moderate: 1, low: 2 };
+
+  let translatedText: string | null = null;
+  if (language !== "en" && text) {
+    try {
+      translatedText = await translateText(text, "en", language);
+    } catch (err) {
+      console.warn("[generateAssessment] Translation failed, falling back to English-only:", err);
+    }
+  }
+
   return {
     text,
+    translatedText,
     sources: sources.sort(
       (a, b) => confidenceRank[a.confidence] - confidenceRank[b.confidence] || b.similarity - a.similarity
     ),

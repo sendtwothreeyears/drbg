@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS conversations  (
 	title TEXT,
 	completed BOOLEAN DEFAULT FALSE,
 	assessment TEXT,
+	assessment_translated TEXT,
 	assessment_sources JSON,
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	authorid TEXT,
