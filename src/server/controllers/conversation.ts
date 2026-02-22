@@ -20,6 +20,7 @@ import { getDiagnosesByConversationQuery } from "../db/operations/diagnoses";
 
 import { runStreamOpenAI } from "../services/runStreamOpenAI";
 import { translateText } from "../services/translate";
+import { generatePDF } from "../services/generatePDF";
 import { StreamEvent } from "../../types";
 
 class Conversations {
@@ -222,6 +223,27 @@ class Conversations {
     const { conversationId } = req.params;
     const diagnoses = await getDiagnosesByConversationQuery(conversationId);
     res.json({ diagnoses });
+  }
+
+  async exportPDF(req: Request<{ conversationId: string }>, res: Response) {
+    const { conversationId } = req.params;
+
+    try {
+      const conversation = await getConversationQuery(conversationId);
+      if (!conversation?.assessment) {
+        return res.status(404).json({ error: "No assessment found" });
+      }
+
+      const base64 = await generatePDF(
+        conversation.assessment,
+        conversation.assessment_sources ? JSON.parse(conversation.assessment_sources) : undefined
+      );
+
+      res.json({ pdf: base64 });
+    } catch (error) {
+      console.error("[exportPDF] error:", error);
+      res.status(500).json({ error: "PDF generation failed" });
+    }
   }
 
   async getConversationAndMessages(

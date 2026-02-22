@@ -28,6 +28,10 @@ router.get("/conversation/:conversationId/diagnoses", (req, res) => {
   conversationService.getDiagnosesByConversation(req, res);
 });
 
+router.post("/conversation/:conversationId/pdf", (req, res) => {
+  conversationService.exportPDF(req, res);
+});
+
 router.get("/conversation/:conversationId", (req, res) => {
   conversationService.getConversationAndMessages(req, res);
 });

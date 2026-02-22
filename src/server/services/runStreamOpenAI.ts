@@ -272,7 +272,6 @@ export async function runStreamOpenAI(
 
         meta.diagnoses = true;
         meta.assessment = text;
-        meta.assessmentTranslated = translatedText;
       }
     }
 

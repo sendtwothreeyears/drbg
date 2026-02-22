@@ -1,6 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { Finding } from "../../types";
-import { translateText } from "./translate";
 
 const client = new Anthropic({
   apiKey: process.env["ANTHROPIC_API_KEY"],
@@ -89,14 +88,7 @@ Base your recommendations on the provided guideline excerpts. Do not fabricate g
 
   const confidenceRank: Record<string, number> = { high: 0, moderate: 1, low: 2 };
 
-  let translatedText: string | null = null;
-  if (language !== "en" && text) {
-    try {
-      translatedText = await translateText(text, "en", language, 8000);
-    } catch (err) {
-      console.warn("[generateAssessment] Translation failed, falling back to English-only:", err);
-    }
-  }
+  const translatedText: string | null = null;
 
   return {
     text,

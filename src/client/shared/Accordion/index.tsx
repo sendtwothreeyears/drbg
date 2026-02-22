@@ -4,10 +4,11 @@ interface AccordionProps {
   title: string;
   subtitle?: string;
   defaultOpen?: boolean;
+  headerActions?: React.ReactNode;
   children: React.ReactNode;
 }
 
-const Accordion = ({ title, subtitle, defaultOpen = true, children }: AccordionProps) => {
+const Accordion = ({ title, subtitle, defaultOpen = true, headerActions, children }: AccordionProps) => {
   const [open, setOpen] = useState(defaultOpen);
 
   return (
@@ -16,7 +17,7 @@ const Accordion = ({ title, subtitle, defaultOpen = true, children }: AccordionP
         onClick={() => setOpen((prev) => !prev)}
         className="flex items-center justify-between w-full text-left bg-emerald-50 rounded-lg px-4 py-3"
       >
-        <div>
+        <div className="flex-1 min-w-0">
           <h3 className="font-ddn font-semibold text-xl text-emerald-900">
             {title}
           </h3>
@@ -24,18 +25,25 @@ const Accordion = ({ title, subtitle, defaultOpen = true, children }: AccordionP
             <p className="font-fakt text-gray-500 text-sm">{subtitle}</p>
           )}
         </div>
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-          className={`w-5 h-5 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`}
-        >
-          <path
-            fillRule="evenodd"
-            d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06z"
-            clipRule="evenodd"
-          />
-        </svg>
+        <div className="flex items-center gap-2">
+          {headerActions && (
+            <span onClick={(e) => e.stopPropagation()}>
+              {headerActions}
+            </span>
+          )}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            className={`w-5 h-5 text-gray-500 transition-transform ${open ? "rotate-180" : ""}`}
+          >
+            <path
+              fillRule="evenodd"
+              d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </div>
       </button>
       {open && <div className="mt-3">{children}</div>}
     </div>
