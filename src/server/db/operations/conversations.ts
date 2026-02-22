@@ -44,11 +44,10 @@ const updateAssessmentMutation = async (
   id: string,
   assessment: string,
   sources: { source: string; section: string; similarity: number }[],
-  assessmentTranslated: string | null = null,
 ): Promise<void> => {
   await pool.query(
-    "UPDATE conversations SET assessment = $1, assessment_sources = $2, assessment_translated = $3 WHERE conversationid = $4",
-    [assessment, JSON.stringify(sources), assessmentTranslated, id],
+    "UPDATE conversations SET assessment = $1, assessment_sources = $2 WHERE conversationid = $3",
+    [assessment, JSON.stringify(sources), id],
   );
 };
 

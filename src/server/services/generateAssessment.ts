@@ -15,7 +15,6 @@ type GuidelineChunk = {
 
 type AssessmentResult = {
   text: string;
-  translatedText: string | null;
   sources: { source: string; section: string; similarity: number; condition: string; confidence: string }[];
 };
 
@@ -23,7 +22,6 @@ const generateAssessment = async (
   findings: Finding[],
   diagnoses: { condition: string; confidence: string }[],
   guidelineResults: GuidelineChunk[][],
-  language: string = "en",
 ): Promise<AssessmentResult> => {
   // Build structured context for the prompt
   const findingsText = findings
@@ -88,11 +86,8 @@ Base your recommendations on the provided guideline excerpts. Do not fabricate g
 
   const confidenceRank: Record<string, number> = { high: 0, moderate: 1, low: 2 };
 
-  const translatedText: string | null = null;
-
   return {
     text,
-    translatedText,
     sources: sources.sort(
       (a, b) => confidenceRank[a.confidence] - confidenceRank[b.confidence] || b.similarity - a.similarity
     ),

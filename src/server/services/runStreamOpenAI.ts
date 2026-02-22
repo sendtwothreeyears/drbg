@@ -262,13 +262,12 @@ export async function runStreamOpenAI(
           differentials.map((d) => searchGuidelines(d.condition, findings)),
         );
 
-        const { text, translatedText, sources } = await generateAssessment(
+        const { text, sources } = await generateAssessment(
           findings,
           differentials,
           guidelineResults,
-          language,
         );
-        await updateAssessmentMutation(conversationId, text, sources, translatedText);
+        await updateAssessmentMutation(conversationId, text, sources);
 
         meta.diagnoses = true;
         meta.assessment = text;

@@ -234,12 +234,11 @@ class Conversations {
         return res.status(404).json({ error: "No assessment found" });
       }
 
-      const base64 = await generatePDF(
-        conversation.assessment,
-        conversation.assessment_sources ? JSON.parse(conversation.assessment_sources) : undefined
-      );
+      const pdfBuffer = await generatePDF(conversation.assessment);
 
-      res.json({ pdf: base64 });
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", 'attachment; filename="boafo-assessment.pdf"');
+      res.send(pdfBuffer);
     } catch (error) {
       console.error("[exportPDF] error:", error);
       res.status(500).json({ error: "PDF generation failed" });
@@ -258,7 +257,6 @@ class Conversations {
       createdAt: conversation?.created_at,
       completed: conversation?.completed,
       assessment: conversation?.assessment,
-      assessmentTranslated: conversation?.assessment_translated || null,
       assessmentSources: conversation?.assessment_sources,
       language: conversation?.language || "en",
       messages,
