@@ -126,9 +126,6 @@ const Home = () => {
           {error && (
             <div className="font-fakt text-red-600 text-sm text-center mt-2">{error}</div>
           )}
-          <div className="font-fakt text-gray-400 text-sm text-center mt-2">
-            This is a demo. Not a substitute for professional medical advice.
-          </div>
         </div>
       </div>
     </div>
