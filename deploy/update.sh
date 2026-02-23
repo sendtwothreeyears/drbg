@@ -14,14 +14,11 @@ echo ">>> Pulling latest code..."
 git fetch origin main
 git reset --hard origin/main
 
-echo ">>> Installing dependencies (including devDependencies for build)..."
-npm ci --include=dev
+echo ">>> Installing dependencies..."
+npm ci
 
 echo ">>> Building frontend..."
 npm run build
-
-echo ">>> Pruning devDependencies..."
-npm prune --production
 
 echo ">>> Running database setup..."
 npm run db:setup
