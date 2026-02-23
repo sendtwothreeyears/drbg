@@ -35,6 +35,6 @@
     "submit": "Submit"
   },
   "tos": {
-    "consent": "I agree to the <tosLink>KasaMD Terms of Service</tosLink> and will discuss all Boafo output with a doctor. Boafo is an AI clinical tool, not a licensed doctor, and does not practice medicine or provide medical advice or care. Questions or complaints: <emailLink>support@kasamd.com</emailLink>"
+    "consent": "I agree to the <tosLink>KasaMD Terms of Service</tosLink> and will discuss all Boafo output with a doctor. Questions or complaints: <emailLink>support@kasamd.com</emailLink>"
   }
 }
