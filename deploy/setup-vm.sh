@@ -9,7 +9,10 @@ BRANCH="main"
 
 # ── System packages ─────────────────────────────────────────────────
 sudo apt-get update
-sudo apt-get install -y curl git nginx postgresql-client
+sudo apt-get install -y curl git nginx postgresql-client \
+  libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 \
+  libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 \
+  libpango-1.0-0 libcairo2 libasound2 libnspr4 libnss3
 
 # ── Node.js 20 ──────────────────────────────────────────────────────
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
