@@ -7,7 +7,7 @@ module.exports = {
       interpreter_args: "--import tsx",
       cwd: "/opt/boafo",
       instances: 1,
-      exec_mode: "cluster",
+      exec_mode: "fork",
       kill_timeout: 5000,
       env: {
         NODE_ENV: "production",
