@@ -56,10 +56,12 @@ CREATE TABLE IF NOT EXISTS guideline_chunks (
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+SET maintenance_work_mem = '256MB';
 CREATE INDEX IF NOT EXISTS idx_guideline_chunks_embedding
 ON guideline_chunks
 USING ivfflat (embedding vector_cosine_ops)
 WITH (lists = 326);
+RESET maintenance_work_mem;
 
 CREATE TABLE IF NOT EXISTS differential_diagnoses (
 	diagnosisid TEXT PRIMARY KEY,
