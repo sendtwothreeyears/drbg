@@ -6,7 +6,14 @@ const pool = new pg.Pool({
   database: process.env.DATABASE ?? "cb",
   user: process.env.PG_USER ?? "postgres",
   password: process.env.PG_PASSWORD ?? "",
+  max: 5,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 5_000,
   ...(process.env.PG_SSL === "true" ? { ssl: { rejectUnauthorized: true } } : {}),
+});
+
+pool.on("connect", (client) => {
+  client.query("SET ivfflat.probes = 10");
 });
 
 export default pool;

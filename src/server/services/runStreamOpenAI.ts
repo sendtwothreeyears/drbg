@@ -12,7 +12,7 @@ import {
   markConversationCompletedMutation,
   updateAssessmentMutation,
 } from "../db/operations/conversations";
-import { searchGuidelines } from "./searchGuidelines";
+import { searchGuidelinesAll } from "./searchGuidelines";
 import { generateAssessment } from "./generateAssessment";
 import { getFindingsByConversationQuery } from "../db/operations/findings";
 import { getProfileByConversationQuery } from "../db/operations/profiles";
@@ -36,6 +36,7 @@ export async function runStreamOpenAI(
   onText: (text: string) => void,
   onToolUse: (tool: ToolCall) => void,
   onAssessmentLoading: () => void,
+  onAssessmentText: (text: string) => void,
   onDone: (meta?: Record<string, any>) => void,
   onError: (err: Error) => void,
   toolName?: string,
@@ -241,6 +242,13 @@ export async function runStreamOpenAI(
     // Build metadata for the done event
     const meta: Record<string, any> = {};
 
+    // Extract clinical findings in parallel (always uses English content)
+    // This is independent of the assessment pipeline — safe to run concurrently
+    const lastUserMsg = dbMessages.findLast((m: Message) => m.role === "user");
+    const extractionPromise = lastUserMsg
+      ? extractFindings(conversationId, lastUserMsg.content).catch(() => {})
+      : Promise.resolve();
+
     // Handle differential diagnoses — persist and kick off RAG search
     if (differentialsCall) {
       // Safety guard: don't generate differentials without patient demographics
@@ -258,14 +266,13 @@ export async function runStreamOpenAI(
 
         const findings = await getFindingsByConversationQuery(conversationId);
 
-        const guidelineResults = await Promise.all(
-          differentials.map((d) => searchGuidelines(d.condition, findings)),
-        );
+        const guidelineResults = await searchGuidelinesAll(differentials, findings);
 
         const { text, sources } = await generateAssessment(
           findings,
           differentials,
           guidelineResults,
+          onAssessmentText,
         );
         await updateAssessmentMutation(conversationId, text, sources);
 
@@ -274,11 +281,8 @@ export async function runStreamOpenAI(
       }
     }
 
-    // Extract clinical findings before signaling done (always uses English content)
-    const lastUserMsg = dbMessages.findLast((m: Message) => m.role === "user");
-    if (lastUserMsg) {
-      await extractFindings(conversationId, lastUserMsg.content);
-    }
+    // Wait for extraction to finish before signaling done
+    await extractionPromise;
 
     // Signal stream completion
     onDone(meta);

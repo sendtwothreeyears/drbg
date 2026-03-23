@@ -89,13 +89,17 @@ const Conversation = () => {
         setAssessmentLoading(true);
         setStreaming(false);
       },
+      // onAssessmentText — streams assessment progressively
+      (text) => {
+        setAssessment((prev) => (prev || "") + text);
+        setAssessmentLoading(false);
+      },
       // onDone
       (meta) => {
         setStreaming(false);
         setAssessmentLoading(false);
         if (meta?.diagnoses) {
           setCompleted(true);
-          setAssessment(meta.assessment);
           setShowDiagnoses(true);
         } else {
           textAreaRef.current?.focus();
@@ -175,8 +179,7 @@ const Conversation = () => {
       a.download = "boafo-assessment.pdf";
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 10000);
-    } catch (err) {
-      console.error("PDF download failed:", err);
+    } catch {
       setError(t("conversation.pdfError"));
     } finally {
       setPdfLoading(false);

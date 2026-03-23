@@ -1,8 +1,4 @@
-import OpenAI from "openai";
-
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { openai } from "./clients";
 
 export const LANGUAGE_NAMES: Record<string, string> = {
   en: "English",
@@ -43,7 +39,7 @@ export async function translateText(
     throw new Error(`Input exceeds maximum length of ${maxLength} characters`);
   }
 
-  const response = await client.chat.completions.create({
+  const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       { role: "system", content: getTranslationPrompt(from, to) },

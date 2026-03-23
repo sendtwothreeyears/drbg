@@ -77,6 +77,8 @@ class Conversations {
       (tool) => send({ tool }),
       // onAssessmentLoading -> signals assessment generation has started
       () => send({ assessmentLoading: true }),
+      // onAssessmentText -> streams assessment text chunks to client
+      (text) => send({ assessmentText: text }),
       // onDone -> signals stream completion with optional metadata, ends connection
       (meta) => {
         send({ done: true, ...meta });

@@ -44,8 +44,8 @@ const FindingsPanel = forwardRef<
     try {
       const { data } = await getFindings(conversationId);
       setFindings(data.findings);
-    } catch (err) {
-      console.error("Failed to load findings", err);
+    } catch {
+      // silently handled
     } finally {
       setLoading(false);
     }

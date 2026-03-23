@@ -33,6 +33,19 @@ sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
 sudo -u postgres psql -c "CREATE DATABASE cb;" || true
 sudo -u postgres psql -d cb -c "CREATE EXTENSION IF NOT EXISTS vector;"
 
+# ── Tune PostgreSQL for e2-micro/e2-small ──────────────────────────
+PG_CONF=$(sudo -u postgres psql -t -c "SHOW config_file;" | xargs)
+sudo tee -a "$PG_CONF" > /dev/null <<'PGCONF'
+
+# Boafo performance tuning
+shared_buffers = 128MB
+effective_cache_size = 512MB
+work_mem = 4MB
+max_connections = 20
+random_page_cost = 1.1
+PGCONF
+sudo systemctl restart postgresql
+
 # ── PM2 ──────────────────────────────────────────────────────────────
 sudo npm install -g pm2
 

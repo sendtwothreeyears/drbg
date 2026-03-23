@@ -4,11 +4,12 @@ module.exports = {
       name: "boafo",
       script: "src/server/main.ts",
       interpreter: "node",
-      interpreter_args: "--import tsx",
+      interpreter_args: "--import tsx --max-old-space-size=384",
       cwd: "/opt/boafo",
       instances: 1,
       exec_mode: "fork",
       kill_timeout: 5000,
+      max_memory_restart: "450M",
       env: {
         NODE_ENV: "production",
       },

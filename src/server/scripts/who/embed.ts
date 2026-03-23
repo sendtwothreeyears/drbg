@@ -72,6 +72,17 @@ async function main() {
     if (i + BATCH_SIZE < chunks.length) await sleep(DELAY_MS);
   }
 
+  console.log("\nRebuilding IVFFlat index...");
+  await pool.query("SET maintenance_work_mem = '128MB'");
+  await pool.query("DROP INDEX IF EXISTS idx_guideline_chunks_embedding");
+  await pool.query(`
+    CREATE INDEX idx_guideline_chunks_embedding
+    ON guideline_chunks
+    USING ivfflat (embedding vector_cosine_ops)
+    WITH (lists = 326)
+  `);
+  console.log("IVFFlat index created.");
+
   await pool.end();
   console.log(`\nDone. ${inserted} chunks embedded and inserted.`);
 }
