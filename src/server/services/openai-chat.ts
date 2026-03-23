@@ -1,6 +1,5 @@
 import OpenAI from "openai";
-
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+import { openai } from "./clients";
 
 export type OpenAIMessage = {
   role: "system" | "user" | "assistant";
@@ -15,7 +14,7 @@ export function createOpenAIChatStream(
   tools?: OpenAITool[],
   model: string = "gpt-5.2",
 ) {
-  return client.chat.completions.create({
+  return openai.chat.completions.create({
     model,
     messages: [{ role: "system", content: system }, ...messages],
     stream: true,

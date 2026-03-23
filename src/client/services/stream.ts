@@ -9,6 +9,7 @@ export const startStream = (
   onText: (text: string) => void,
   onToolUse: (tool: ToolUseEvent) => void,
   onAssessmentLoading: () => void,
+  onAssessmentText: (text: string) => void,
   onDone: (meta?: Record<string, any>) => void,
   onError?: (errorMsg: string) => void,
 ) => {
@@ -22,8 +23,6 @@ export const startStream = (
   );
 
   eventSource.onmessage = (event: MessageEvent) => {
-    console.log("data", event);
-
     const data = JSON.parse(event.data);
 
     // stream is ongoing - add chunks to messages array, update UI
@@ -37,6 +36,10 @@ export const startStream = (
     // Assessment generation has started
     else if (data.assessmentLoading) {
       onAssessmentLoading();
+    }
+    // Assessment text streaming in
+    else if (data.assessmentText) {
+      onAssessmentText(data.assessmentText);
     }
     // Stream ends
     else if (data.done) {

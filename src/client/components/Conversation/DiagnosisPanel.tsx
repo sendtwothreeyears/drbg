@@ -54,8 +54,8 @@ const DiagnosisPanel = ({ conversationId }: { conversationId: string }) => {
         ]);
         setDiagnoses(diagRes.data.diagnoses);
         setSources(convRes.data.assessmentSources || []);
-      } catch (err) {
-        console.error("Failed to load diagnoses", err);
+      } catch {
+        // silently handled
       } finally {
         setLoading(false);
       }

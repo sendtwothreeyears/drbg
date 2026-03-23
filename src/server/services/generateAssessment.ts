@@ -1,9 +1,5 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { anthropic } from "./clients";
 import type { Finding } from "../../types";
-
-const client = new Anthropic({
-  apiKey: process.env["ANTHROPIC_API_KEY"],
-});
 
 type GuidelineChunk = {
   chunkid: string;
@@ -22,6 +18,7 @@ const generateAssessment = async (
   findings: Finding[],
   diagnoses: { condition: string; confidence: string }[],
   guidelineResults: GuidelineChunk[][],
+  onText?: (chunk: string) => void,
 ): Promise<AssessmentResult> => {
   // Build structured context for the prompt
   const findingsText = findings
@@ -43,10 +40,7 @@ const generateAssessment = async (
     })
     .join("\n\n---\n\n");
 
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-5-20250929",
-    max_tokens: 2048,
-    system: `You are a clinical decision-support assistant. Given a patient's clinical findings, differential diagnoses, and relevant clinical guideline excerpts, generate a concise Assessment & Plan. Structure your response as:
+  const systemPrompt = `You are a clinical decision-support assistant. Given a patient's clinical findings, differential diagnoses, and relevant clinical guideline excerpts, generate a concise Assessment & Plan. Structure your response as:
 
 ASSESSMENT:
 A brief clinical summary linking the findings to the most likely diagnoses.
@@ -54,17 +48,25 @@ A brief clinical summary linking the findings to the most likely diagnoses.
 PLAN:
 Numbered actionable steps covering recommended investigations, treatment, and follow-up.
 
-Base your recommendations on the provided guideline excerpts. Do not fabricate guideline references. Keep the language clinical but accessible.`,
-    messages: [
-      {
-        role: "user",
-        content: `CLINICAL FINDINGS:\n${findingsText}\n\nDIFFERENTIAL DIAGNOSES:\n${diagnosesText}\n\nCLINICAL GUIDELINES:\n${guidelinesText}`,
-      },
-    ],
+Base your recommendations on the provided guideline excerpts. Do not fabricate guideline references. Keep the language clinical but accessible.`;
+
+  const userContent = `CLINICAL FINDINGS:\n${findingsText}\n\nDIFFERENTIAL DIAGNOSES:\n${diagnosesText}\n\nCLINICAL GUIDELINES:\n${guidelinesText}`;
+
+  let text = "";
+
+  const stream = anthropic.messages.stream({
+    model: "claude-sonnet-4-5-20250929",
+    max_tokens: 2048,
+    system: systemPrompt,
+    messages: [{ role: "user", content: userContent }],
   });
 
-  const text =
-    response.content[0].type === "text" ? response.content[0].text : "";
+  stream.on("text", (chunk) => {
+    text += chunk;
+    if (onText) onText(chunk);
+  });
+
+  await stream.finalMessage();
 
   // Deduplicate sources for storage
   const seen = new Set<string>();
